@@ -19,17 +19,57 @@ library(grid)
 
 base_folder <- "D:/cob/latest/latest"
 
-# info on model files
-model_dirs  <- parse_directory(base_folder = base_folder)
-
-# select only the "Output" and "OtherDataSheet" files
-# model_outs  <- model_dirs[grepl("Other|Output", model_dirs$output), ]
-
-path_lst <-
-  model_dirs %>%
-  dplyr::group_by(output) %>%
-  dplyr::group_split()
-
+# # info on model files
+# model_dirs  <- parse_directory(base_folder = base_folder)
+#
+# # select only the "Output" and "OtherDataSheet" files
+# # model_outs  <- model_dirs[grepl("Other|Output", model_dirs$output), ]
+#
+# path_lst <-
+#   model_dirs %>%
+#   dplyr::group_by(output) %>%
+#   dplyr::group_split()
+#
+# date_convert <- readr::read_csv("data-raw/qm_to_date_conversion.csv")
+#
+# # process quota file
+# quota_df <- process_quota(
+#   quota_path = model_dirs[model_dirs$output == "Quota",]$path,
+#   model_ids  = model_dirs$plot_id[!grepl("NANA", model_dirs$plot_id)]
+#   )
+#
+# path_df <-
+#   model_dirs %>%
+#   dplyr::filter(output == "OutputSheet")
+#
+# # Read in all output sheets
+# out_df <- lapply(1:nrow(path_df), function(y) {
+#
+#   out <- process_output(
+#     output_path = path_df$path[y],
+#     model_ver   = path_df$model_version[y],
+#     model_id    = path_df$model_id[y],
+#     verbose     = TRUE
+#   )
+#
+# }) %>%
+#   dplyr::bind_rows()
+#
+# tmp <-
+#   out_df %>%
+#   dplyr::filter(model_version == "055a")
+#
+# # retrieve loopup table from all Output sheets and keep the distinct rows (no duplicate definitions)
+# definitions <-  lapply(1:nrow(path_df), function(y) {
+#
+#    make_lookup(output_path = path_df$path[y])
+#
+#   }
+# ) %>%
+#   dplyr::bind_rows() %>%
+#   dplyr::distinct()
+#
+#
 
 
 # set the project working directory
@@ -39,20 +79,20 @@ currwd <- "D:/cob/latest/latest"
 
 
 ### User controlled data
-model_version <- c("v075")
+model_version <- c("v055a")
 
 base_model_ID <- "ID1"                # Leave as ID1 (always compare with base)
 base_model_ID_suffix <- ""        # if this is not needed, keep blank ""
 base_climate <- "7525"               # Base or 9010, 7525, Center
-base_model_ID_prefix <- "0101."   # if this is not needed, keep blank ""
+base_model_ID_prefix <- ""   # if this is not needed, keep blank ""
 
-
-compare_model_version <- c("v075")
+# rm(base_model_ID_prefix, compare_model_ID_prefix)
+compare_model_version <- c("v055a")
 
 compare_model_ID <- "ID5"            # ID2, ID3, ID4, ID5
 compare_model_ID_suffix <- ""   # if this is not needed, keep blank ""
 compare_climate <- "7525"             # Base or 9010, 7525, Center
-compare_model_ID_prefix <- "0101."   # if this is not needed, keep blank ""
+compare_model_ID_prefix <- ""   # if this is not needed, keep blank ""
 
 # set plot parameters
 title_size = 10
@@ -67,9 +107,12 @@ device_type <- ".png"     # .png, .pdf
 # Calculated parameters ---------------------------------------------------
 
 
-output_folder <- paste(base_model_ID, "-", base_climate, " vs ",
-                       compare_model_ID, "-", compare_climate, sep = "")
-
+output_folder <-
+  paste0(
+    base_model_ID, "-", base_climate,  "-", gsub("v", "", model_version),
+    " vs ",
+    compare_model_ID, "-", compare_climate, "-", gsub("v", "", compare_model_version)
+  )
 
 model_version_text <- substr(model_version, start = 2, stop = nchar(model_version))
 compare_model_version_text <- substr(compare_model_version, start = 2, stop = nchar(compare_model_version))
@@ -182,11 +225,11 @@ if(quota_list_scenarios[1] == quota_list_scenarios[2]){
 
 }
 
-quota <- process_quota(
-  quota_path = quota_path,
-  model_ids  = paste0(path_lst[[4]]$id, path_lst[[4]]$climate),
-  verbose    = TRUE
-)
+# quota <- process_quota(
+#   quota_path = quota_path,
+#   model_ids  = paste0(path_lst[[4]]$id, path_lst[[4]]$climate),
+#   verbose    = TRUE
+# )
 
 
 ### Plot the quotas
@@ -215,7 +258,7 @@ data_list <- list()
 
 # import the two scenarios to compare
 for (i in 1:n_file_prefix){
-
+# i = 1
   # read in the quarter-monthly CRAM model data
   data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
                    col_names = FALSE)
@@ -224,20 +267,22 @@ for (i in 1:n_file_prefix){
   column_names <- data[5, ]
   column_parameter <- data[4, ]
   column_descriptions <- data[3, ]
-i =1
+# i =1
   # re-read in the quarter-monthly CRAM model data (skipping name rows at the top)
   data <- read_csv(
-    paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""), col_names = F)
-                   # skip = 4)
+    paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+    # col_names = F,
+                   skip = 4)
   data <- data[1:4800, ]
 
   # read in the quarter-monthly to date converter
-  qm_convert <- read_csv("qm_to_date_conversion.csv")
-  qm_convert
+  qm_convert <- read_csv("data-raw/qm_to_date_conversion.csv")
+
 
 
   # rename basic data components
-  data_list[[i]] <- data %>%
+  data_list[[i]] <-
+    data %>%
     rename(year = Step...1) %>%
     rename(qm = Step...2) %>%
     rename(OpStep = Step...3) %>%
@@ -394,7 +439,7 @@ tbl_temp2 <- gtable_add_grob(tbl_temp2,
                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
                              t = 7, b = nrow(tbl_temp2), l = 1, r = ncol(tbl_temp2))
 
-#grid.draw(tbl_temp2)
+grid.draw(tbl_temp2)
 
 
 # ### Table 3
@@ -1441,7 +1486,8 @@ ggsave(
 
 
 ### New annual table analysis
-annual_extract_table <- annual_extract %>%
+annual_extract_table <-
+  annual_extract %>%
   select(year, ModelRun, COB_CBT_TotalUse, COB_CBT_Unused) %>%
   group_by(ModelRun) %>%
   summarise('CBT Use (mean)' = round(mean(COB_CBT_TotalUse),0), 'CBT Use (min)' = min(COB_CBT_TotalUse),
@@ -1714,21 +1760,28 @@ plot_title <- "2ac. COB C-BT Annual Water Use"
 file_name <- paste(plot_title, " 1x1 ", sep = "")
 
 # save the plot
-pdf(
-  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-        output_folder, ".pdf", sep = ""),
-  width = 14, height = 8)
+# pdf(
+#   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
+#         output_folder, ".pdf", sep = ""),
+#   width = 14, height = 8)
 
 # grid.arrange(tbl_temp_a, tbl_temp_c, tbl_temp_b, nrow = 2,
 #              top = plot_title,
 #              right = "", bottom = "",
 #              layout_matrix = rbind(c(1, 1),
 #                                    c(3, 3)))
-grid.arrange(tbl_temp_a, nrow = 1,
+tbl_temp_a2 <- grid.arrange(tbl_temp_a, nrow = 1,
              top = plot_title,
              right = "", bottom = "",
              layout_matrix = rbind(c(1, 1),
                                    c(3, 3)))
+
+ggsave(
+  filename =  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",                    output_folder, ".png", sep = ""),
+  width = 12,
+  height = 8,
+  tbl_temp_a2
+       )
 grid.text("Annual C-BT Water Use", x = unit(0.5, "npc"), y = unit(0.81, "npc"),
           gp = gpar(fontsize = 14))
 # grid.text("Annual Unused C-BT Water", x = unit(0.75, "npc"), y = unit(0.81, "npc"),
@@ -3671,16 +3724,29 @@ file_name <- paste(plot_title, " 2x2 ", sep = "")
 
 
 # save the plot
-pdf(
-  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-        output_folder, ".pdf", sep = ""),
-  width = 14, height = 8)
+# pdf(
+#   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
+#         output_folder, ".pdf", sep = ""),
+#   width = 14, height = 8)
 
-grid.arrange(tbl_temp_a, tbl_temp_b, nrow = 2,
-             top = plot_title,
-             right = "", bottom = "",
-             layout_matrix = rbind(c(1, 1),
-                                   c(3, 3)))
+# grid.arrange(tbl_temp_a, tbl_temp_b, nrow = 2,
+#              top = plot_title,
+#              right = "", bottom = "",
+#              layout_matrix = rbind(c(1, 1),
+#                                    c(3, 3)))
+
+tbl_temp_b2 <- grid.arrange(tbl_temp_b, nrow = 1,
+                            top = plot_title,
+                            right = "", bottom = "",
+                            layout_matrix = rbind(c(1, 1),
+                                                  c(3, 3)))
+
+ggsave(
+  filename =  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",                    output_folder, ".png", sep = ""),
+  width = 12,
+  height = 8,
+  tbl_temp_b2
+)
 grid.text("Annual Upper Instream Flow Shortages (af)", x = unit(0.5, "npc"), y = unit(0.81, "npc"),
           gp = gpar(fontsize = 14))
 grid.text("Annual Lower Instream Flow Shortages (af)", x = unit(0.5, "npc"), y = unit(0.34, "npc"),

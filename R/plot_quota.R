@@ -1,4 +1,4 @@
-process_quota <- function(
+plot_quota <- function(
     quota      = NULL,
     model_ids  = NULL,
     start_year = 1900,

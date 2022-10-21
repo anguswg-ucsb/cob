@@ -4,6 +4,9 @@ process_isf <- function(
     verbose = TRUE
 ) {
 
+  # model_dirs$model_id
+  # model_ids <- isf_df
+  # isf_df
   # isf_path <- path_lst[[2]]$path
   # model_ids <- tolower(paste0(path_lst[[4]]$id, path_lst[[4]]$climate))
 
@@ -17,7 +20,7 @@ process_isf <- function(
     show_col_types = FALSE
   ) %>%
     janitor::clean_names() %>%
-    dplyr::select(wyqm, days_in_qm, model_ids)
+    dplyr::select(wyqm, days_in_qm, dplyr::contains(model_ids))
 
   return(isf)
 
