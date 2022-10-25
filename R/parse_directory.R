@@ -72,7 +72,8 @@ parse_directory = function(
       plot_id          = paste0(model_id, model_num),
       path = paste0(base_folder, "/", file)
     ) %>%
-    dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, base_folder, file, path)
+    dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, base_folder, file, path) %>%
+    dplyr::tibble()
 
   return(dir_df)
 
