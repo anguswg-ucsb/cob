@@ -3,18 +3,8 @@ process_output <- function(
     date_df,
     verbose = TRUE
 ) {
-  # output_path <- path_lst[[4]]$path[1]
-  # output_path <- path_lst[[6]]$path[2]
-  # model_ver   <- path_lst[[6]]$model_version[2]
-  # output_path = path_df$path[y]
-  # model_ver   = path_df$model_version[y]
-  # model_id    = path_df$model_id[y]
-  # date_df     = date_convert
-  # verbose     = TRUE
 
-  # file_df <- path_df[y, ]
-  # y = 3
-  # file_df     = path_df[y, ]
+  # file_df <- base_mods
   # date_df     = date_convert
   # verbose     = TRUE
   # rm(file_df, out, out2, y, verbose, date_df, output_path, model_ver, model_id, model_num)
@@ -30,6 +20,9 @@ process_output <- function(
 
   # Model number
   model_num   <- file_df$model_num
+
+  # Model number
+  extra_info  <- file_df$extra_info
 
   if(verbose == TRUE) {
     message(paste0("Processing OutputSheet...",
@@ -87,6 +80,9 @@ process_output <- function(
   # remove descriptive rows
   out <- out[(name_index+1):nrow(out),]
 
+  # remove columns w/ only NA values in entire column
+  out <- rm_na_cols(out)
+
   # join date conversion w/ output sheet
   out <-
     out %>%
@@ -102,11 +98,12 @@ process_output <- function(
       model_version  = model_ver,
       model_id       = model_id,
       model_num      = model_num,
+      extra_info     = extra_info,
       wyqm           = paste(year, qm, sep = '-'),
       start_date     = as.Date(start_date, format="%m/%d/%Y", tz = "UTC"),
       end_date       = as.Date(end_date, format="%m/%d/%Y", tz = "UTC")
       ) %>%
-    dplyr::relocate(model_version, model_id, model_num, year, qm, wyqm, step, start_date, end_date)
+    dplyr::relocate(model_version, model_id, model_num, extra_info, year, qm, wyqm, step, start_date, end_date)
 
   return(out)
 

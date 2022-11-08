@@ -1,6 +1,6 @@
 process_isf <- function(
     isf_path,
-    model_ids,
+    # model_ids,
     verbose = TRUE
 ) {
 
@@ -11,7 +11,7 @@ process_isf <- function(
   # model_ids <- tolower(paste0(path_lst[[4]]$id, path_lst[[4]]$climate))
 
   # convert to lower to match clean names
-  model_ids <- tolower(model_ids)
+  # model_ids <- tolower(model_ids)
 
   # Read in ISF year type CSV
   isf <- readr::read_csv(
@@ -19,8 +19,8 @@ process_isf <- function(
     col_names      = T,
     show_col_types = FALSE
   ) %>%
-    janitor::clean_names() %>%
-    dplyr::select(wyqm, days_in_qm, dplyr::contains(model_ids))
+    janitor::clean_names()
+    # dplyr::select(wyqm, days_in_qm, dplyr::contains(model_ids))
 
   return(isf)
 

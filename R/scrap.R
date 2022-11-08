@@ -40,16 +40,26 @@ model_dirs  <- parse_directory(base_folder = base_folder)
 base_mods <-
   model_dirs %>%
   dplyr::filter(
-    model_id %in% c("ID1"),
-    model_version %in% c("055a")
+    # model_id %in% c("ID1"),
+    # model_version %in% c("055c")
     # output == "OutputSheet"
+    grepl("055c_3143_ID5_7525", file),
+     output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
-  dplyr::filter(name != "Quota", model_num == "Base") %>%
+  # dplyr::filter(
+  #   name != "Quota",
+  #   model_num == "7525"
+  #   ) %>%
+  dplyr::mutate(
+    # model_id = paste0(model_id, "_", "ID1")
+    model_id = paste0("ID5")
+  ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
+    # prefix = substr(file, 28, 31)
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
@@ -57,15 +67,23 @@ comp_mods <-
   model_dirs %>%
   dplyr::filter(
     # !model_id %in% c("ID1")
-    model_id %in% c("ID2", "ID5"),
-    model_version %in% c("055b")
+    # model_id %in% c("ID2", "ID3", "ID5"),
+    # model_id %in% c("ID2", "ID5"),
+    # model_version %in% c("055a")
+    grepl("055c_8500_ID5_7525", file),
+    output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
-  dplyr::filter(name != "Quota", model_num == "Base") %>%
+  # dplyr::filter(name != "Quota", model_num == "7525") %>%
+  dplyr::mutate(
+    # model_id = paste0(model_id, "_", "ID1")
+    model_id = paste0("ID5")
+  ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
+     # prefix = substr(file, 28, 31)
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
@@ -95,7 +113,12 @@ comp_mods <-
 # z <- 1
 # rm(z)# rm(i)
 # z <- 3
-
+# z <- 1
+# k=1
+comp_mod_size = "8500"
+base_mod_size = "3143"
+# z = 1
+# k = 1
 # iterate through base models
 for(z in 1:nrow(base_mods)) {
 
@@ -131,6 +154,7 @@ for(z in 1:nrow(base_mods)) {
   # base_model_ID_prefix <- ""
   # model_version
   # k  <- 6
+  # k = 1
   # iterate through comparison models
   for(k in 1:nrow(comp_mods)) {
 
@@ -215,25 +239,46 @@ for(z in 1:nrow(base_mods)) {
       #                         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
       #                  paste0(compare_model_ID_prefix, "DRRP_DroughtPlan_2020_", compare_model_version_text, "_",
       #                         base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
+
+            # file_prefix <- c(paste0(
+      #   # base_model_ID_prefix,
+      #                         # "DRRP_DroughtPlan_2020_",
+      #                         ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
+      #                                paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
+      #                         model_version_text, "_",
+      #                         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
+      #                  paste0(
+      #                    # compare_model_ID_prefix,
+      #                         # "DRRP_DroughtPlan_2020_",
+      #                         ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
+      #                                paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
+      #                         compare_model_version_text, "_",
+      #                         base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
+
       file_prefix <- c(paste0(
         # base_model_ID_prefix,
-                              # "DRRP_DroughtPlan_2020_",
-                              ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-                                     paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-                              model_version_text, "_",
-                              base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""),
-                       paste0(
-                         # compare_model_ID_prefix,
-                              # "DRRP_DroughtPlan_2020_",
-                              ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-                                     paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-                              compare_model_version_text, "_",
-                              compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""))
+        # "DRRP_DroughtPlan_2020_",
+        ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
+               paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
+        model_version_text, "_8500_",
+        compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
+        paste0(
+          # compare_model_ID_prefix,
+          # "DRRP_DroughtPlan_2020_",
+          ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
+                 paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
+          compare_model_version_text, "_3143_",
+          base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
       n_file_prefix <- length(file_prefix)
-      scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
-                               compare_model_version, sep = ""),
-                         paste(base_climate, "-", base_model_ID, "_", model_version,
-                               base_model_ID_suffix, sep = ""))
+      # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
+      #                          compare_model_version, "_", compare_model_ID_prefix, "_8500", sep = ""),
+      #                    paste(base_climate, "-", base_model_ID, "_", model_version,
+      #                          base_model_ID_suffix, "_", base_model_ID_prefix, "_3143", sep = ""))
+
+      scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_", compare_model_ID_suffix,
+                               compare_model_version, "_", compare_model_ID_prefix, sep = ""),
+                         paste(base_climate, "-", base_model_ID, "_3143_",  model_version,
+                               base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
       scenario_name
       n_scenario_name <- length(scenario_name)
 
@@ -243,6 +288,12 @@ for(z in 1:nrow(base_mods)) {
       # get the model configuration we are analyzing
       ISF_compare_year <- paste(compare_model_ID, compare_climate, sep = "")
       ISF_base_year <- paste(base_model_ID, base_climate, sep = "")
+      # ISF_compare_year <- paste(
+      #   gsub(paste0(comp_mod_size, "_"), "", compare_model_ID),
+      #   compare_climate, sep = "")
+      # ISF_base_year <- paste(
+      #   gsub(paste0(base_mod_size, "_"), "", base_model_ID),
+      #   base_climate, sep = "")
       ISF_list <- c(ISF_compare_year, ISF_base_year)
 
       # ISF year type data (qm data from 1915-2014)
@@ -367,6 +418,8 @@ for(z in 1:nrow(base_mods)) {
       for (i in 1:n_file_prefix){
       # i = 1
         # read in the quarter-monthly CRAM model data
+        # data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+        #                  col_names = FALSE)
         data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
                          col_names = FALSE)
 
@@ -3863,9 +3916,93 @@ for(z in 1:nrow(base_mods)) {
 
       dev.off()
 
-      }
+
       # South Platte Calls Analysis ---------------------------------------------
 
+  # CBT Boulder Res qm output 6c -----------------------------------------
 
+  # showing DO30, DO2, and Res 12, that would be great
+
+  extract <- list()
+
+  # i <- 1
+  for (i in 1:n_file_prefix){
+
+    extract_list[[i]] <- data_list[[i]] %>%
+      # group by ModelRun to calculate values by group
+      group_by(ModelRun) %>%
+      # select the columns of interest from the vector above using !!!syms to read it properly
+      select("year", "qm", "Date", "ModelRun", "DataObject_30_Flow", "DataObject_2_Flow",
+             "Reservoir_12_Content") %>%
+      # now, group data by Year & ModelRun to sum data annually
+      group_by(year, ModelRun)
+
+    extract_list[[i]]
+
+  }
+
+  # merge the data from the loops together
+  extract <- bind_rows(extract_list[[1]], extract_list[[2]])
+
+  ### Check the factor & levels for the 'ModelRun' column (we will plot by this)
+  # factor(cbt_windygap$ModelRun)
+  # levels(cbt_windygap$ModelRun)
+  # # set the factor 'levels' to the correct plotting order
+  extract$ModelRun <-factor(extract$ModelRun, levels = c(scenario_name))
+  # Levels should be updated
+  levels(extract$ModelRun)
+
+
+  # put to long form
+  extract2 <- extract %>%
+    # convert from 'wide' to 'long' format for plotting w/ ggplot
+    pivot_longer(., cols = c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content"),
+                 names_to = "Name", values_to = "Output")
+  extrac2_site_list <- c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
+  n_extrac2_site_list <- length(extrac2_site_list)
+
+
+  y_lab_list <- c(rep("Flow (af)", 10), rep("Contents (af)", 3))
+  p <- list()
+
+  for (i in 1:n_extrac2_site_list){
+
+    # select 1 flow data to plot per i iteration of loop
+    extract_plot <- extract2 %>%
+      filter(Name == extrac2_site_list[i])
+
+
+    # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
+    p[[i]] <- ggplot(extract_plot, aes_string(x = "Date", y = "Output", color = "ModelRun",
+                                              linetype = "ModelRun")) +
+      geom_line() +
+      theme_bw() +
+      ylim(0, NA) +
+      ylab(y_lab_list[i]) +
+      xlab("Water Year") +
+      ggtitle(extract_plot$Name[1]) +
+      theme(plot.title = element_text(size = title_size),
+            axis.title = element_text(size = xaxis_size))
+
+    # p[[i]]
+
+  }
+
+  # define the plot name
+  plot_title <- "2l. Boulder Res QM - Time Series Plot"
+  file_name <- paste(plot_title, " 3x1 ", sep = "")
+
+  # save the plot
+  ggsave(
+    paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
+          output_folder, device_type, sep = ""),
+    width = 14, height = 8,
+    grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
+                 top = plot_title,
+                 right = ""))
+
+  rm(n_extrac2_site_list, extrac2_site_list, extract, extract2)
+
+  }
 }
 

@@ -20,6 +20,72 @@ parse_directory = function(
   dir_df <- data.frame(
     file = list.files(base_folder, pattern = ".csv")
   )
+
+  dir_df <-
+    dir_df %>%
+    dplyr::tibble() %>%
+    dplyr::mutate(
+      parsed = gsub("^[^_]+_|_[^_]+$", "", file)
+    ) %>%
+    dplyr::group_by(file) %>%
+    dplyr::mutate(
+      model_id_check = substr(
+                          file,
+                          stringr::str_locate(file, "ID")[[1]],
+                          stringr::str_locate(file, "ID")[[2]] + 1
+                          )
+      ) %>%
+    tidyr::separate(
+        parsed,
+        into  = c('name', 'year', 'model_version', 'model_id'),
+        sep   = "_",
+        extra = "drop",
+        fill  = "right"
+      ) %>%
+    dplyr::mutate(
+      model_id = dplyr::case_when(
+        model_id != model_id_check ~ model_id_check,
+        TRUE                  ~ model_id
+      )
+    ) %>%
+    dplyr::select(-model_id_check) %>%
+    dplyr::mutate(
+      base_folder    = base_folder,
+      output         = stringr::str_match(
+        stringr::str_extract(file,  "\\.[^_]+$"), '([^.]+)(?:.[^.]+){2}$')[,2],
+      output         = dplyr::case_when(
+        is.na(output) ~ name,
+        TRUE          ~ output
+      ),
+      model_num        = stringr::str_extract(
+        gsub(
+          "\\.",
+          "_",
+          gsub( ".*_(.*)\\.csv", "\\1", file)
+        ),
+        "^[^_]+(?=_)"
+      ),
+      plot_id          = paste0(model_id, model_num),
+      path = paste0(base_folder, "/", file)
+    ) %>%
+    dplyr::mutate(
+      extra_info = stringr::str_match(file, paste0(model_version, "(.*?)", model_id))[,2],
+      extra_info = dplyr::case_when(
+        extra_info == "_" ~ "",
+        TRUE              ~ gsub("_", "", extra_info)
+      )
+    ) %>%
+    dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, extra_info, base_folder, file, path) %>%
+    dplyr::tibble()
+
+  return(dir_df)
+
+  # file_str <- tmp_df$file[22]
+  # file_ver  <- tmp_df$model_version[22]
+  # file_id <- tmp_df$model_id[22]
+  # extra_details <- stringr::str_match(file_str, paste0(file_ver, "(.*?)", file_id))[,2]
+
+
   # "[^._]+(?:_[^._]+){2}(?=_[^.]*$)"
   # z <- dir_df$file[18]
   # z
@@ -41,42 +107,42 @@ parse_directory = function(
   #
   # dir_df$file[1]
   # z <- dir_df$file[1]
-  dir_df <-
-    dir_df %>%
-    dplyr::mutate(
-        parsed = gsub("^[^_]+_|_[^_]+$", "", file)
-    ) %>%
-    tidyr::separate(
-      parsed,
-      into  = c('name', 'year', 'model_version', 'model_id'),
-      sep   = "_",
-      extra = "drop",
-      fill  = "right"
-    ) %>%
-    dplyr::mutate(
-      base_folder    = base_folder,
-      output         = stringr::str_match(
-        stringr::str_extract(file,  "\\.[^_]+$"), '([^.]+)(?:.[^.]+){2}$')[,2],
-      output         = dplyr::case_when(
-        is.na(output) ~ name,
-        TRUE          ~ output
-      ),
-      model_num        = stringr::str_extract(
-                                  gsub(
-                                    "\\.",
-                                    "_",
-                                    gsub( ".*_(.*)\\.csv", "\\1", file)
-                                  ),
-                                  "^[^_]+(?=_)"
-                                ),
-      plot_id          = paste0(model_id, model_num),
-      path = paste0(base_folder, "/", file)
-    ) %>%
-    dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, base_folder, file, path) %>%
-    dplyr::tibble()
+  # dir_df <-
+  #   dir_df %>%
+  #   dplyr::mutate(
+  #       parsed = gsub("^[^_]+_|_[^_]+$", "", file)
+  #   ) %>%
+  #   tidyr::separate(
+  #     parsed,
+  #     into  = c('name', 'year', 'model_version', 'model_id'),
+  #     sep   = "_",
+  #     extra = "drop",
+  #     fill  = "right"
+  #   ) %>%
+  #   dplyr::mutate(
+  #     base_folder    = base_folder,
+  #     output         = stringr::str_match(
+  #       stringr::str_extract(file,  "\\.[^_]+$"), '([^.]+)(?:.[^.]+){2}$')[,2],
+  #     output         = dplyr::case_when(
+  #       is.na(output) ~ name,
+  #       TRUE          ~ output
+  #     ),
+  #     model_num        = stringr::str_extract(
+  #                                 gsub(
+  #                                   "\\.",
+  #                                   "_",
+  #                                   gsub( ".*_(.*)\\.csv", "\\1", file)
+  #                                 ),
+  #                                 "^[^_]+(?=_)"
+  #                               ),
+  #     plot_id          = paste0(model_id, model_num),
+  #     path = paste0(base_folder, "/", file)
+  #   ) %>%
+  #   dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, base_folder, file, path) %>%
+  #   dplyr::tibble()
 
-  return(dir_df)
-
+  # return(dir_df)
+  }
   # str <- dir_df$file[1]
   # sub(".*DroughtPlan\\D*(\\d+).*", "\\1", str)
   # year <- sub(".*DroughtPlan\\D*(\\d+).*", "\\1", str)
@@ -149,5 +215,5 @@ parse_directory = function(
 
   # stringr::str_match(string, '([^-]+)(?:-[^-]+){3}$')[,2]
   # ext            = gsub("\\.", "", stringr::str_extract(x, "\\.[^_]+$"))
-}
+# }
 

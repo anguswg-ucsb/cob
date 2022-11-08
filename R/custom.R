@@ -97,7 +97,7 @@ quota <- process_quota(
 )
 model_dirs %>%
   tibble()
-model_dirs$path[2]
+
 data_annual <- readr::read_csv(model_dirs$path[2],
          col_names = FALSE
          )
