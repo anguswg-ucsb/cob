@@ -2691,7 +2691,7 @@ for(z in 1:nrow(base_mods)) {
           group_by(ModelRun) %>%
           # select the columns of interest from the vector above using !!!syms to read it properly
           select("year", "qm", "Date", "ModelRun", "DataObject_29_Flow", "DataObject_1_Flow",
-                 "DataObject_2_Flow") %>%
+                 "DataObject_30_Flow") %>%
           # now, group data by Year & ModelRun to sum data annually
           group_by(year, ModelRun)
 
@@ -2714,9 +2714,9 @@ for(z in 1:nrow(base_mods)) {
       # put to long form
       extract2 <- extract %>%
         # convert from 'wide' to 'long' format for plotting w/ ggplot
-        pivot_longer(., cols = c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_2_Flow"),
+        pivot_longer(., cols = c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_30_Flow"),
                      names_to = "Name", values_to = "Output")
-      extrac2_site_list <- c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_2_Flow")
+      extrac2_site_list <- c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_30_Flow")
       n_extrac2_site_list <- length(extrac2_site_list)
 
 
@@ -2753,7 +2753,7 @@ for(z in 1:nrow(base_mods)) {
         paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
               output_folder, device_type, sep = ""),
         width = 14, height = 8,
-        grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
+        grid.arrange(p[[1]], p[[3]], p[[2]], nrow = 3,
                      top = plot_title,
                      right = ""))
 
@@ -3919,7 +3919,7 @@ for(z in 1:nrow(base_mods)) {
 
       # South Platte Calls Analysis ---------------------------------------------
 
-  # CBT Boulder Res qm output 6c -----------------------------------------
+  # CBT Boulder Res qm output 2l -----------------------------------------
 
   # showing DO30, DO2, and Res 12, that would be great
 
@@ -3932,7 +3932,7 @@ for(z in 1:nrow(base_mods)) {
       # group by ModelRun to calculate values by group
       group_by(ModelRun) %>%
       # select the columns of interest from the vector above using !!!syms to read it properly
-      select("year", "qm", "Date", "ModelRun", "DataObject_30_Flow", "DataObject_2_Flow",
+      select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_2_Flow",
              "Reservoir_12_Content") %>%
       # now, group data by Year & ModelRun to sum data annually
       group_by(year, ModelRun)
@@ -3956,9 +3956,9 @@ for(z in 1:nrow(base_mods)) {
   # put to long form
   extract2 <- extract %>%
     # convert from 'wide' to 'long' format for plotting w/ ggplot
-    pivot_longer(., cols = c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content"),
+    pivot_longer(., cols = c("DataObject_1_Flow", "DataObject_2_Flow", "Reservoir_12_Content"),
                  names_to = "Name", values_to = "Output")
-  extrac2_site_list <- c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
+  extrac2_site_list <- c("DataObject_1_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
   n_extrac2_site_list <- length(extrac2_site_list)
 
 
@@ -4005,4 +4005,4 @@ for(z in 1:nrow(base_mods)) {
 
   }
 }
-
+FP
