@@ -274,6 +274,7 @@ comp_mods <-
     base_summary$path,
     col_names = FALSE
   )
+
   mod_summary_lst <- list(base_summary, comp_summary)
 
   # loop through model run output sheets and read in and process data
@@ -281,7 +282,7 @@ comp_mods <-
 
     message(paste0("Processing annual summary:\n", mod_summary_lst[[y]]$file))
 
-    process_annual_summary(
+    process_drought_metrics(
       summary_path = mod_summary_lst[[y]]$path,
       model_run    = scenario_name[y]
       )
@@ -298,8 +299,9 @@ comp_mods <-
   #                        "Adj Drought Response", "Precent", "Criteria", "Pass Fail")
 
   # table specs/setup
-  size <- 0.65
+  size  <- 0.65
   size1 <- 0.65
+
   tt <-
     gridExtra::ttheme_default(
       core    = list(
@@ -345,6 +347,158 @@ comp_mods <-
     )
 
   grid.draw(tbl_temp2)
+
+  # output_df <- outputs
+  # model_run <- scenario_name[y]
+  # qm <- 29
+  # length(scenario_name)
+
+  # loop through model run output sheets and extract drought indices for each model run
+  drought_index <- lapply(1:length(scenario_name), function(y) {
+
+    message(paste0("Processing drought indices - ", scenario_name[y]))
+    process_drought_index(
+      output_df = outputs,
+      model_run = scenario_name[y],
+      qm        = 29
+    )
+
+  }) %>%
+    dplyr::bind_rows()
+
+
+  # May 1 Annual PSI and Reservoir Storage Plots (1a) --------------------------------------------------------
+
+
+
+  drought_index_list <- list()
+  for (i in 1:n_file_prefix){
+
+    drought_index_list[[i]] <- data_list[[i]] %>%
+      # drought index is set May 1 each year (model sets in QM 29)
+      filter(qm == 29) %>%
+      # DataObject 15 = PSI/DRI drought index,
+      # Dataobject 12 = Drought Trigger Level,
+      # Res 3 = barker reservoir storage,
+      # Res 1 = watershed res storage,
+      # DataObject 1 = COB's share of Boulder res contents,
+      # Res 12 = Total Boulder Res Contents
+      select(year, qm, Date, ModelRun, DataObject_15_Flow, DataObject_12_Flow, Reservoir_3_Content,
+             Reservoir_1_Content, DataObject_1_Flow, Reservoir_12_Content,
+             DataObject_13_Flow) %>%
+      mutate(PSI = DataObject_15_Flow/100) %>%
+      rename(DroughtResponseLevel = DataObject_12_Flow) %>%
+      rename(Barker_Res_Contents_af = Reservoir_3_Content) %>%
+      rename(NBC_Res_Contents_af = Reservoir_1_Content) %>%
+      rename(Boulder_Res_Contents_af = DataObject_1_Flow) %>%
+      rename(TotalBoulder_Res_Contents_af = Reservoir_12_Content) %>%
+      mutate(Upper_Storage_af = rowSums(across(c(Barker_Res_Contents_af, NBC_Res_Contents_af)))) %>%
+      rename(Predicted_Storage_af = DataObject_13_Flow)
+    drought_index_list[[i]]
+
+  }
+
+  # merge the data from the loops together
+  drought_index <- bind_rows(drought_index_list[[1]], drought_index_list[[2]])
+
+  # Check the factor & levels for the 'ModelRun' column (we will plot by this)
+  # factor(drought_index$ModelRun)
+  # levels(drought_index$ModelRun)
+  # set the factor 'levels' to the correct plotting order
+  drought_index$ModelRun <-factor(drought_index$ModelRun, levels = scenario_name)
+  # Levels should be updated
+  levels(drought_index$ModelRun)
+
+
+  temp <- drought_index %>%
+    #select(year, qm, PSI) %>%
+    filter(year >= 2000 & year <= 2008)
+
+  ### Make the DRI & Reservoir Contents Time Series Plots ###
+
+  site_list <- c("PSI", "DroughtResponseLevel", "Barker_Res_Contents_af",
+                 "NBC_Res_Contents_af", "Upper_Storage_af", "Boulder_Res_Contents_af")
+  title_list <- c("Projected Storage Index","Drought Response Level",
+                  "Barker Reservoir Contents", "NBC Reservoir Contents",
+                  "Total Upper Reservoir Contents", "COB Boulder Reservoir Contents")
+  n_site_list <- length(site_list)
+  y_axis_max_list <- c(2.5, 5, 13000, 8000, 20000, 7000)
+  #color_list <- c("black", "#4169E1", "#4169E1", "#4169E1")
+  ylab_list <- c("PSI", "Drought Response Level", "Reservoir Contents (af)",
+                 "Reservoir Contents (af)", "Reservoir Contents (af)", "Reservoir Contents (af)")
+  storage_max_list <- c(NA, NA, 11277, 6927, 18204) #NBC Res, Barker Res, Boulder Res (summer storage)
+
+
+  p <- list()
+  p_drought_triggers <- list()
+  for (i in 1:n_site_list){
+
+    if (i == 1){
+
+      p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                                 color = "ModelRun", linetype = "ModelRun")) +
+        geom_line() + #col = color_list[i]
+        geom_hline(yintercept = 0.40, linetype="solid", color="red") +
+        geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
+        geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
+        geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
+        #geom_hline(yintercept = 1.0, linetype="solid", color="black") +
+        theme_bw() +
+        ylim(0, y_axis_max_list[i]) +
+        ylab(ylab_list[i]) +
+        xlab("Water Year") +
+        ggtitle(title_list[i]) +
+        theme(plot.title = element_text(size = title_size),
+              axis.title = element_text(size = xaxis_size))
+      #p[[i]]
+
+    } else if(i == 2){
+
+      p_drought_triggers <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                                             color = "ModelRun", linetype = "ModelRun")) +
+        geom_line() + #col = color_list[i]
+        theme_bw() +
+        ylim(0, y_axis_max_list[i]) +
+        ylab(ylab_list[i]) +
+        xlab("Water Year") +
+        ggtitle(title_list[i]) +
+        theme(plot.title = element_text(size = title_size),
+              axis.title = element_text(size = xaxis_size),
+              panel.grid.minor.y = element_blank())
+
+    } else {
+
+      # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
+      p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                                 color = "ModelRun", linetype = "ModelRun")) +
+        geom_line() + #col = color_list[i]
+        geom_hline(yintercept = storage_max_list[i], color = "black", size = 0.25) +
+        theme_bw() +
+        ylim(0, y_axis_max_list[i]) +
+        ylab(ylab_list[i]) +
+        xlab("Water Year") +
+        ggtitle(title_list[i]) +
+        theme(plot.title = element_text(size = title_size),
+              axis.title = element_text(size = xaxis_size))
+      #p[[i]]
+
+    }
+
+
+  }
+
+  # define the plot name
+  plot_title <- "1a. May 1 Annual Reservoir Contents - Time Series Plot"
+  file_name <- paste(plot_title, " 3x2 ", sep = "")
+
+  # save the plot
+  ggsave(
+    filename = paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
+                     output_folder, device_type, sep = ""),
+    width = 14, height = 8,
+    grid.arrange(p[[1]], p_drought_triggers, p[[3]], p[[4]], p[[5]], tbl_temp2, nrow = 3,
+                 top = plot_title,
+                 right = "", bottom = ""))
   # For Plot 1a
   data_annual[132:136, 11:12]
   # DataObject 15 = PSI/DRI drought index,

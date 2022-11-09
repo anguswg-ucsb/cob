@@ -29,6 +29,7 @@ base_folder <- "D:/cob/latest/latest"
 # *****************************************
 # ---- build model directory dataframe ----
 # *****************************************
+# COB Total Demand Flow
 
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
@@ -46,9 +47,30 @@ output <- process_output(
   date_df = date_convert
   )
 
-# lookup table
-definitions <- make_lookup(output_path = model_dirs[4, ]$path)
+# Read in OutputDemandSheet
+output_demand <- readr::read_csv(
+  model_dirs[3, ]$path,
+  col_names      = FALSE,
+  show_col_types = FALSE
+  )
 
+# Read in OutputAnnualSummary
+output_summary <- readr::read_csv(
+  model_dirs[2, ]$path,
+  col_names      = FALSE,
+  show_col_types = FALSE
+  )
+
+model_dirs[3, ]$path
+
+# OutputSheet lookup table
+out_defs <- make_lookup(output_path = model_dirs[4, ]$path)
+
+# OutputDemandSheet lookup table
+demand_defs <-  make_lookup(output_path = model_dirs[3, ]$path)
+
+# OutputAnnualSummary lookup table
+summary_defs <-  make_lookup(output_path = model_dirs[2, ]$path)
 
 # exchange potential
 exchange_potent <- readr::read_csv("D:/cob/psi/ExchangePotential_Lookup.csv", show_col_types = FALSE)
@@ -62,14 +84,46 @@ proj_inflow
 demands <- readr::read_csv("D:/cob/psi/COB_Annual_Demands_2050.csv", show_col_types = FALSE)
 demands
 
+fixed_demands <- readr::read_csv("D:/cob/psi/FixedBCDemands.csv", show_col_types = FALSE)
+fixed_demands
+
 # Inflow 1 (North Boulder Creek above Silver Lake) + Inflow 10 (MBC abv Barker Reservoir) from May 1 - June 30
 
 # ExchangePotential = read this in via csv
 #
 # TotalBypassplusDirect = get static value
-#
+
 # NewStorageWater = min(ExchangePotential, mtnInflow - TotalBypassplusDirect)
-#
+#For City of Boulder total demand, use Demand_58_Flow + Demand_91_Flow
+
+### COB Mtn Direct Calc
+MayPctDmd = 0.0913
+JunPctDmd = 0.1193
+# COBAnnualDemand (lookup from csv file)
+
+out_defs %>%
+  dplyr::filter(Name %in% c("Demand_58_Flow", "Demand_91_Flow"))
+
+COBAnnualDemand <-
+  output %>%
+  dplyr::select(model_version:end_date, Demand_58_Flow, Demand_91_Flow) %>%
+  dplyr::mutate(
+    annual_demand     = as.numeric(Demand_58_Flow) + as.numeric(Demand_91_Flow),
+    may_pct_dmd       = 0.0913,
+    june_pct_dmd      = 0.1193,
+    may_june_demand   = may_pct_dmd*annual_demand + june_pct_dmd*annual_demand,
+    pipeline_capacity = 8686.4
+  ) %>%
+  dplyr::group_by(wyqm) %>%
+  dplyr::mutate(
+    cob_mtn_direct    = min(may_june_demand, pipeline_capacity)
+  )
+  # dplyr::filter(qm == "28")
+# MayJuneDemand = (MayPctDmdCOBAnnualDemand) + (JunPctDmdCOBAnnualDemand)
+# PipelineCapacity = 8686.4 #af capacity May-June
+# COBMtnDirect = min(MayJuneDemand, PipelineCapacity)
+# TotalBypassplusDirect = min(COBMtnDirect + max(FixedBCDemands[10 ditches]-0.346*MtnInflow,0), mtnInflow)
+# TotalBypassplusDirect = min(COBMtnDirect + max(FixedBCDemands-0.346*MtnInflow,0), mtnInflow)
 
 # # Barker Res
 # May1BarkerStorage = Reservoir_3_Content on QM 28
