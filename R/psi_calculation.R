@@ -61,8 +61,6 @@ output_summary <- readr::read_csv(
   show_col_types = FALSE
   )
 
-model_dirs[3, ]$path
-
 # OutputSheet lookup table
 out_defs <- make_lookup(output_path = model_dirs[4, ]$path)
 
@@ -84,92 +82,92 @@ proj_inflow
 demands <- readr::read_csv("D:/cob/psi/COB_Annual_Demands_2050.csv", show_col_types = FALSE)
 demands
 
+# fixed BC Demands
 fixed_demands <- readr::read_csv("D:/cob/psi/FixedBCDemands.csv", show_col_types = FALSE)
 fixed_demands
 
-# Inflow 1 (North Boulder Creek above Silver Lake) + Inflow 10 (MBC abv Barker Reservoir) from May 1 - June 30
+# fixed BC demands for scenario 7525
+fbc_dmd <-
+  fixed_demands %>%
+  dplyr::filter(grepl("7525", Scenario)) %>%
+  .$FixedBCDemands
 
-# ExchangePotential = read this in via csv
-#
-# TotalBypassplusDirect = get static value
-
-# NewStorageWater = min(ExchangePotential, mtnInflow - TotalBypassplusDirect)
-#For City of Boulder total demand, use Demand_58_Flow + Demand_91_Flow
-
-### COB Mtn Direct Calc
-MayPctDmd = 0.0913
-JunPctDmd = 0.1193
 # COBAnnualDemand (lookup from csv file)
-
-out_defs %>%
-  dplyr::filter(Name %in% c("Demand_58_Flow", "Demand_91_Flow"))
-
 COBAnnualDemand <-
   output %>%
   dplyr::select(model_version:end_date, Demand_58_Flow, Demand_91_Flow) %>%
+  dplyr::group_by(year) %>%
+  dplyr::summarise(
+    Demand_58_Flow    = sum(as.numeric(Demand_58_Flow)),
+    Demand_91_Flow    = sum(as.numeric(Demand_91_Flow)),
+    annual_demand     = as.numeric(Demand_58_Flow) + as.numeric(Demand_91_Flow)
+    ) %>%
   dplyr::mutate(
-    annual_demand     = as.numeric(Demand_58_Flow) + as.numeric(Demand_91_Flow),
     may_pct_dmd       = 0.0913,
     june_pct_dmd      = 0.1193,
     may_june_demand   = may_pct_dmd*annual_demand + june_pct_dmd*annual_demand,
     pipeline_capacity = 8686.4
-  ) %>%
-  dplyr::group_by(wyqm) %>%
+    ) %>%
+  dplyr::group_by(year) %>%
   dplyr::mutate(
-    cob_mtn_direct    = min(may_june_demand, pipeline_capacity)
+    cob_mtn_direct    = min(may_june_demand, pipeline_capacity),
+    fixed_bc_demands  = fbc_dmd
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::left_join(
+    dplyr::mutate(
+      proj_inflow,
+      year       = as.character(year),
+      mtn_inflow = Inflow1 + Inflow10
+    ),
+    by = "year"
+  ) %>%
+  dplyr::group_by(year) %>%
+  dplyr::mutate(
+    total_bypass_plus_direct = min(cob_mtn_direct + max(fixed_bc_demands - 0.346*mtn_inflow, 0), mtn_inflow)
+  ) %>%
+  dplyr::ungroup()
+
+# calculate new storage water using mtn_inflow, avg_mtn_inflow, pct of mtn_inflow compared to average mountain inflow
+NewStorageWater <-
+  COBAnnualDemand %>%
+  dplyr::select(year, annual_demand, cob_mtn_direct, mtn_inflow, total_bypass_plus_direct) %>%
+  dplyr::mutate(
+    avg_mtn_inflow     = mean(mtn_inflow),
+    pct_avg            = round(mtn_inflow/avg_mtn_inflow, 3)*100,
+    exchange_potential = dplyr::case_when(
+                                    pct_avg < 40                 ~ 0,
+                                    pct_avg >= 40 & pct_avg < 70 ~ 3000,
+                                    pct_avg >= 70 & pct_avg < 90 ~ 7000,
+                                    pct_avg >= 90                ~ 14000
+                                    )
+    ) %>%
+  dplyr::group_by(year) %>%
+  dplyr::mutate(
+    new_storage_water = min(exchange_potential, mtn_inflow - total_bypass_plus_direct)
   )
-  # dplyr::filter(qm == "28")
-# MayJuneDemand = (MayPctDmdCOBAnnualDemand) + (JunPctDmdCOBAnnualDemand)
-# PipelineCapacity = 8686.4 #af capacity May-June
-# COBMtnDirect = min(MayJuneDemand, PipelineCapacity)
-# TotalBypassplusDirect = min(COBMtnDirect + max(FixedBCDemands[10 ditches]-0.346*MtnInflow,0), mtnInflow)
-# TotalBypassplusDirect = min(COBMtnDirect + max(FixedBCDemands-0.346*MtnInflow,0), mtnInflow)
 
-# # Barker Res
-# May1BarkerStorage = Reservoir_3_Content on QM 28
-May1BarkerStorage <-
-  output %>%
-  dplyr::select(model_version:end_date, Reservoir_3_Content) %>%
-  dplyr::filter(qm == "28")
-
-# # Watershed Reservoirs
-# May1NBCStorage = Reservoir_1_Content on QM 28
-May1NBCStorage <-
-  output %>%
-  dplyr::select(model_version:end_date, Reservoir_1_Content) %>%
-  dplyr::filter(qm == "28")
-
-# # predicted May 1 storage
 # PredictedStorage = min(18250, May1BarkerStorage + May1NBCStorage + NewStorageWater)
-#
-# # COB Boulder Res Storage
-# BoulderResStorage = DataObject_1_Flow on QM 28
-BoulderResStorage <-
+PredictedStorage <-
   output %>%
-  dplyr::select(model_version:end_date, DataObject_1_Flow) %>%
-  dplyr::filter(qm == "28")
+  dplyr::select(model_version:end_date, Reservoir_3_Content, Reservoir_1_Content, DataObject_1_Flow, DataObject_39_Flow) %>%
+  dplyr::filter(qm == "28") %>%
+  dplyr::left_join(
+    NewStorageWater,
+    by = "year"
+  ) %>%
+  dplyr::group_by(year) %>%
+  dplyr::select(year, annual_demand, Reservoir_3_Content, Reservoir_1_Content, DataObject_1_Flow, DataObject_39_Flow, exchange_potential, new_storage_water) %>%
+  dplyr::mutate(
+    mtn_storage             = as.numeric(Reservoir_3_Content) + as.numeric(Reservoir_1_Content),
+    pred_storage            = min(18250, as.numeric(Reservoir_3_Content) + as.numeric(Reservoir_1_Content) + new_storage_water),
+    cbt_exchange_adjust     = min(18250 - mtn_storage, exchange_potential),
+    cbt_capacity            = min(new_storage_water, cbt_exchange_adjust),
+    cbt_numerator           = (as.numeric(DataObject_39_Flow) - cbt_capacity)*0.40,
+    total_numerator         = pred_storage + cbt_numerator,
+    psi_orig                = total_numerator/annual_demand,
+    psi_new                 = (total_numerator + as.numeric(DataObject_1_Flow))/annual_demand
+  )
 
-# # CBT half of equation
-# Boulder_CBT_Storage = DataObject_39_Flow QM 28
-Boulder_CBT_Storage <-
-  output %>%
-  dplyr::select(model_version:end_date, DataObject_39_Flow) %>%
-  dplyr::filter(qm == "28")
-
-# COBCBTExchangeAdjustment = min(18250 - mtnStorage, exchangePotential)
-# COBCBTExchangeAdjustment <- min()
-# COB_CBT_capacity = min(NewStorageWater, COBCBTExchangeAdjustment)
-#
-
-# CBT fraction value
-CBT_Fraction = 0.40
-#
-# CBT_Numerator = (Boulder_CBT_Storage - COB_CBT_capacity)*CBT_Fraction
-#
-# Total_Numerator = PredictedStorage + CBT_Numerator
-#
-# COB_Annual_Demand = lookup via csv
-#
-# PSI_orig = Total_Numerator / COB_Annual_Demand
-#
-# PSI_new = (Total_Numerator + BoulderResStorage)/ COB_Annual_Demand
+# save out PSI calculations
+write.csv(PredictedStorage, "D:/cob/psi/cob_psi_new.csv")=

@@ -43,7 +43,7 @@ base_mods <-
     # model_id %in% c("ID1"),
     # model_version %in% c("055c")
     # output == "OutputSheet"
-    grepl("055c_3143_ID5_7525", file),
+    grepl("055c_3143_17mgd_ID1_7525", file),
      output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -55,7 +55,7 @@ base_mods <-
   #   ) %>%
   dplyr::mutate(
     # model_id = paste0(model_id, "_", "ID1")
-    model_id = paste0("ID5")
+    model_id = paste0("ID1")
   ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
@@ -70,7 +70,7 @@ comp_mods <-
     # model_id %in% c("ID2", "ID3", "ID5"),
     # model_id %in% c("ID2", "ID5"),
     # model_version %in% c("055a")
-    grepl("055c_8500_ID5_7525", file),
+    grepl("055c_8500_17mgd_ID1_7525", file),
     output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -79,7 +79,7 @@ comp_mods <-
   # dplyr::filter(name != "Quota", model_num == "7525") %>%
   dplyr::mutate(
     # model_id = paste0(model_id, "_", "ID1")
-    model_id = paste0("ID5")
+    model_id = paste0("ID1")
   ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
@@ -87,38 +87,12 @@ comp_mods <-
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
-# model_dirs %>%
-#   dplyr::filter(
-#     !model_id %in% c("ID1"),
-#     output == "OutputSheet"
-#   ) %>%
-#   dplyr::group_by(model_version, model_id, model_num) %>%
-#   dplyr::slice(1) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::filter(name != "Quota", model_num == "7525") %>%
-#   dplyr::mutate(
-#     prefix = substr(file, 1, 4)
-#   )
-  # dplyr::select(model_version, model_id, model_num)
 
-      # # retrieve loopup table from all Output sheets and keep the distinct rows (no duplicate definitions)
-      # definitions <-  lapply(1:nrow(path_df), function(y) {
-      #
-      #    make_lookup(output_path = path_df$path[y])
-      #
-      #   }
-      # ) %>%
-      #   dplyr::bind_rows() %>%
-      #   dplyr::distinct()
-# z <- 1
-# rm(z)# rm(i)
-# z <- 3
-# z <- 1
-# k=1
-comp_mod_size = "8500"
-base_mod_size = "3143"
+# comp_mod_size = "8500"
+# base_mod_size = "3143"
 # z = 1
 # k = 1
+
 # iterate through base models
 for(z in 1:nrow(base_mods)) {
 
@@ -148,13 +122,6 @@ for(z in 1:nrow(base_mods)) {
   #                )
   #         )
 
-  # base_model_ID <- "ID1"                # Leave as ID1 (always compare with base)
-  # base_model_ID_suffix <- ""        # if this is not needed, keep blank ""
-  # base_climate <- "7525"               # Base or 9010, 7525, Center
-  # base_model_ID_prefix <- ""
-  # model_version
-  # k  <- 6
-  # k = 1
   # iterate through comparison models
   for(k in 1:nrow(comp_mods)) {
 
@@ -260,14 +227,14 @@ for(z in 1:nrow(base_mods)) {
         # "DRRP_DroughtPlan_2020_",
         ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-        model_version_text, "_8500_",
+        model_version_text, "_8500_17mgd_",
         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
         paste0(
           # compare_model_ID_prefix,
           # "DRRP_DroughtPlan_2020_",
           ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                  paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-          compare_model_version_text, "_3143_",
+          compare_model_version_text, "_3143_17mgd_",
           base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
       n_file_prefix <- length(file_prefix)
       # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
@@ -275,9 +242,9 @@ for(z in 1:nrow(base_mods)) {
       #                    paste(base_climate, "-", base_model_ID, "_", model_version,
       #                          base_model_ID_suffix, "_", base_model_ID_prefix, "_3143", sep = ""))
 
-      scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_", compare_model_ID_suffix,
+      scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_17mgd_", compare_model_ID_suffix,
                                compare_model_version, "_", compare_model_ID_prefix, sep = ""),
-                         paste(base_climate, "-", base_model_ID, "_3143_",  model_version,
+                         paste(base_climate, "-", base_model_ID, "_3143_17mgd_",  model_version,
                                base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
       scenario_name
       n_scenario_name <- length(scenario_name)
@@ -504,10 +471,12 @@ for(z in 1:nrow(base_mods)) {
                                data_annual_list[[2]][132:136, 11:12])
       colnames(data_annual) <- c("DroughtResponse", "Count")
       data_annual$Count <- as.numeric(data_annual$Count)
-      data_annual2 <- bind_cols(ModelRun = c(rep(scenario_name[1], 5),
-                                             rep(scenario_name[2], 5)),
+      # data_annual2 <- bind_cols(ModelRun = c(rep(scenario_name[1], 5),
+      #                                        rep(scenario_name[2], 5)),
+      #                           data_annual)
+      data_annual2 <- bind_cols(ModelRun = c(gsub("_DRRP", "", rep(scenario_name[1], 5)),
+                                             gsub("_DRRP", "", rep(scenario_name[2], 5))),
                                 data_annual)
-
       data_annual2$CityReliability <- rep(c(NA, NA, 1, 2, 3), 2)
       data_annual2$ExceedancePercent = c(NA, NA, sum(data_annual2$Count[2:3]),
                                          data_annual2$Count[4], data_annual2$Count[5],
@@ -839,7 +808,7 @@ for(z in 1:nrow(base_mods)) {
       ggsave(
         filename = paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
                          output_folder, device_type, sep = ""),
-        width = 14, height = 8,
+        width = 16, height = 8,
         grid.arrange(p[[1]], p_drought_triggers, p[[3]], p[[4]], p[[5]], tbl_temp2, nrow = 3,
                      top = plot_title,
                      right = "", bottom = ""))
@@ -4005,4 +3974,4 @@ for(z in 1:nrow(base_mods)) {
 
   }
 }
-FP
+
