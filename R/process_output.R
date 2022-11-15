@@ -3,12 +3,23 @@ process_output <- function(
     date_df,
     verbose = TRUE
 ) {
-
+  # file_df = comp_mods[1, ]
+  # date_df = qm_convert
+  # verbose = FALSE
+  # data <- fread(output_path,
+  #               na.strings= NA,
+  #               header = FALSE)
   # file_df <- base_mods
   # date_df     = date_convert
   # verbose     = TRUE
   # rm(file_df, out, out2, y, verbose, date_df, output_path, model_ver, model_id, model_num)
-
+  # file_df = nocc_model
+  # date_df = "D:/cob/compact_call/qm_to_date_conversion2.csv"
+  # verbose = TRUE
+  # y = 16
+  # file_df = comp_mods[y, ]
+  # date_df = qm_convert
+  # verbose = FALSE
   # path to file
   output_path <- file_df$path
 
