@@ -29,26 +29,35 @@ currwd <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Mod
 
 # "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Compact Call Analysis/ID5/0500.DRRP_DroughtPlan_2020_055a_CC_ID5_7525.OtherDataSheet.csv"
 # "G:/My Drive/American_Whitewater_LHDP.lnk"
-list.files(currwd)
+# list.files(currwd)
 # setwd(currwd)
 
 
 ### User controlled data
-model_version <- c("v062")
+# model_version <- c("v062")
 
-base_model_ID <- "ID2"                # Leave as ID1 (always compare with base)
-base_climate <- "Base"               # Base or 7525
-base_model_ID_suffix <- "nocc"        # no compact call (nocc)
+# base_model_ID <- "ID2"                # Leave as ID1 (always compare with base)
+# base_climate <- "Base"               # Base or 7525
+# base_model_ID_suffix <- "nocc"        # no compact call (nocc)
+# compare_model_ID = base_model_ID            # ID2, ID3, ID4, ID5
+# compare_climate = base_climate             # Base or 9010, 7525, Center
+# compare_model_ID_suffix <- "cc"           # compact call ON (cc)
 
-compare_model_ID = base_model_ID            # ID2, ID3, ID4, ID5
-compare_climate = base_climate             # Base or 9010, 7525, Center
-compare_model_ID_suffix <- "cc"           # compact call ON (cc)
+model_version <- c("v055ac")
+
+base_model_ID <- "ID5"                # Leave as ID1 (always compare with base)
+base_climate <- "7525"               # Base or 7525
+base_model_ID_suffix <- "nocc"
+
+compare_model_ID = "ID5"
+compare_climate = "7525"
+compare_model_ID_suffix <- "cc"
 
 # number of years to analyze in ensemble model run (after the shut down year)
 analysis_years = 4
 
 # number of columns in output sheet
-output_sheet_columns <- 327
+output_sheet_columns <- 311
 
 # number of compact call ensemble runs
 # ensemble_model_runs = 90
@@ -64,6 +73,8 @@ xaxis_size = 9
 
 model_folder <- base_model_ID
 
+# fix current working directory to remove model folder created above
+currwd_fix <- gsub(paste0("/", model_folder , "/"), "", currwd)
 
 
 # Calculated parameters ---------------------------------------------------
@@ -125,14 +136,12 @@ if(base_model_ID == "ID1"){
 
 
 # ensemble file prefixes
-file_prefix <- c(paste0(prefix_numbers, ".", "DRRP_DroughtPlan_2020_", model_version_text, "_", compare_model_ID,
-                        "_", compare_climate))
-file_prefix
+file_prefix <- c(paste0(prefix_numbers, ".", "DRRP_DroughtPlan_2020_", model_version_text, "_CC_", compare_model_ID, "_", compare_climate))
+# file_prefix
 n_file_prefix <- length(file_prefix)
 
 # base file prefix
-base_file_prefix <- c(paste0(base_prefix, ".", "DRRP_DroughtPlan_2020_", model_version_text, "_", compare_model_ID,
-                             "_", compare_climate))
+base_file_prefix <- c(paste0(base_prefix, ".", "DRRP_DroughtPlan_2020_", model_version_text, "_CC_", compare_model_ID, "_", compare_climate))
 
 
 
@@ -156,11 +165,31 @@ scenario_name_nocc
 data_list <- list()
 
 start_time <- Sys.time()
-
+# rm(i)
+# paste0(currwd_fix, "/", model_folder, "//", file_prefix[i], ".OutputSheet.csv")
+# model_dirs$path[1]
+# i = 1
+# rm(i, data)
+# currwd_fix <- gsub(paste0("/",model_folder , "/"), "", currwd)
 # import the two scenarios to compare
 #for (i in 1:n_file_prefix){
+# i <- 1
+# model_dirs$path[1]
+# data <- read_csv(
+#   # paste0(currwd_fix, "/", model_folder, "/", file_prefix[i], ".OutputSheet.csv"),
+#   model_dirs$path[1],
+#   col_names      = FALSE,
+#   col_types      = readr::cols(.default="c"),
+#   show_col_types = T
+# )
 
+# "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Compact Call Analysis/ID5/0501.DRRP_DroughtPlan_2020_055ac_CC_ID5_7525.OutputSheet.csv"
+# "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Compact Call Analysis/ID5//0501.DRRP_DroughtPlan_2020_055ac_ID5_CC_7525.OutputSheet.csv"
+# paste0(currwd_fix, "/", model_folder, "//", file_prefix[i], ".OutputSheet.csv")
+# i
 for (i in 1:temp_run_number){
+
+  message(paste0(i, "/", temp_run_number))
 
   if(i == 1){
 
@@ -169,9 +198,14 @@ for (i in 1:temp_run_number){
     #                  col_names = FALSE)
 
     # read in the quarter-monthly CRAM model data
-    data <- fread(paste0(model_folder, "/", file_prefix[i], ".OutputSheet.csv"),
+    data <- fread(paste0(currwd_fix, "/", model_folder, "//", file_prefix[i], ".OutputSheet.csv"),
                   header = FALSE)
-
+    # data <- read_csv(
+    #   paste0(currwd_fix, "/", model_folder, "/", file_prefix[i], ".OutputSheet.csv"),
+    #   col_names      = FALSE,
+    #   col_types      = readr::cols(.default="c"),
+    #   show_col_types = T
+    #   )
     # get the column name & column descriptions
     # use these later to build definitions
     column_names <- data[5, ]
@@ -180,6 +214,7 @@ for (i in 1:temp_run_number){
 
     # name the columns using row 5
     temp_colnames <- as.character(data[5,])
+
     # rename the first 3 columns
     temp_colnames[1:3] <- c("year", "qm", "step")
     # set the column names
@@ -187,10 +222,12 @@ for (i in 1:temp_run_number){
     # remove rows 1-5, extract all columns needed
     data2 <- data[6:dim(data)[1], 1:output_sheet_columns]
     # convert all columns from character to numeric
-    data2 <- data2 %>% mutate(across(year:Link_560_Flow, as.numeric))
+    data2 <- data2 %>% mutate(across(c(-qm, -step), as.numeric))
+
 
     # read in the quarter-monthly to date converter
-    qm_convert <- read_csv("qm_to_date_conversion2.csv")
+    # qm_convert <- read_csv("qm_to_date_conversion2.csv")
+    qm_convert <- readr::read_csv("D:/cob/compact_call/qm_to_date_conversion2.csv")
     #qm_convert
 
 
@@ -214,7 +251,7 @@ for (i in 1:temp_run_number){
     #                  col_names = FALSE, skip = 4)
 
     # read in the quarter-monthly CRAM model data
-    data <- fread(paste0(model_folder, "/", file_prefix[i], ".OutputSheet.csv"),
+    data <- fread(paste0(currwd_fix, "/", model_folder, "//", file_prefix[i], ".OutputSheet.csv"),
                   header = FALSE, skip = 4)
 
     # name the columns using row 5 (now row 1 after skip =4)
@@ -226,7 +263,7 @@ for (i in 1:temp_run_number){
     # remove rows 1, extract all columns needed
     data2 <- data[2:dim(data)[1], 1:output_sheet_columns]
     # convert all columns from character to numeric
-    data2 <- data2 %>% mutate(across(year:Link_560_Flow, as.numeric))
+    data2 <- data2 %>% mutate(across(c(-qm, -step), as.numeric))
 
 
     # rename basic data components
@@ -309,24 +346,30 @@ units.df <- data.frame(Parameter = c("Flow", "High", "Content", "Shortage", "Pri
 definitions <- left_join(definitions, units.df, by = "Parameter")
 
 # add new parameters here
-new_data <- data.frame(Name = c("Total_Upper_Storage", "COB_Panama_qm_max_contents",
-                                "COB_Panama_qm_avg_contents", "COB_Panama_qm_min_contents",
-                                "COB_Wittemyer_qm_max_contents", "COB_Wittemyer_qm_avg_contents",
-                                "COB_Wittemyer_qm_min_contents",
-                                "Panama+Wittemyer_qm_max_contents",
-                                "Panama+Wittemyer_qm_avg_contents", "Panama+Wittemyer_qm_min_contents"),
-                       Description = c("Barker+NBC Reservoirs", "Max COB Space in Panama Res",
+new_data <- data.frame(Name        = c(
+                                      "Total_Upper_Storage", "COB_Panama_qm_max_contents",
+                                      "COB_Panama_qm_avg_contents", "COB_Panama_qm_min_contents",
+                                      "COB_Wittemyer_qm_max_contents", "COB_Wittemyer_qm_avg_contents",
+                                      "COB_Wittemyer_qm_min_contents",
+                                      "Panama+Wittemyer_qm_max_contents",
+                                      "Panama+Wittemyer_qm_avg_contents", "Panama+Wittemyer_qm_min_contents"
+                                        ),
+                       Description = c(
+                                       "Barker+NBC Reservoirs", "Max COB Space in Panama Res",
                                        "Avg COB Space in Panama Res", "Min COB Space in Panama Res",
                                        "Max COB Space in Wittemyer Res",
                                        "Avg COB Space in Wittemyer Res", "Min COB Space in Wittemyer Res",
                                        "Max COB Panama+Wittemyer Res",
-                                       "Avg COB Panama+Wittemyer Res", "Min COB Panama+Wittemyer Res"),
-                       Parameter = c("Content", "Content", "Content", "Content",
-                                     "Content", "Content", "Content",
-                                     "Content", "Content", "Content"),
-                       Units = c("Contents (af)", "Contents (af)", "Contents (af)", "Contents (af)",
-                                 "Contents (af)", "Contents (af)", "Contents (af)",
-                                 "Contents (af)", "Contents (af)", "Contents (af)")
+                                       "Avg COB Panama+Wittemyer Res", "Min COB Panama+Wittemyer Res"
+                                       ),
+                       Parameter = rep("Content", 10,),
+                       Units     = rep("Contents (af)", 10)
+                       # Parameter = c("Content", "Content", "Content", "Content",
+                       #               "Content", "Content", "Content",
+                       #               "Content", "Content", "Content"),
+                       # Units = c("Contents (af)", "Contents (af)", "Contents (af)", "Contents (af)",
+                       #           "Contents (af)", "Contents (af)", "Contents (af)",
+                       #           "Contents (af)", "Contents (af)", "Contents (af)")
 )
 
 definitions <- rbind(definitions, new_data)
@@ -360,6 +403,9 @@ data_list_merge <- rbind(data_list[[1]], data_list[[2]], data_list[[3]], data_li
                          data_list[[81]], data_list[[82]], data_list[[83]], data_list[[84]], data_list[[85]],
                          data_list[[86]], data_list[[87]], data_list[[88]], data_list[[89]]
 )
+
+
+
 
 # data_list_merge <- rbind(data_list[[1]], data_list[[2]], data_list[[3]], data_list[[4]], data_list[[5]],
 #                          data_list[[6]], data_list[[7]], data_list[[8]]
