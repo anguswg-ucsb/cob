@@ -49,10 +49,11 @@ save_path   <- "D:/cob/compact_call/outputs"
 # COB Total Demand Flow
 
 date_df <- readr::read_csv("D:/cob/compact_call/qm_to_date_conversion2.csv")
-#
-# # info on model files
+
+# info on model files
 model_dirs  <- parse_directory_cc(base_folder = base_folder)
-#
+
+# baseline NOCC model info
 base_mods <-
   model_dirs %>%
   dplyr::filter(
@@ -62,6 +63,7 @@ base_mods <-
     output == "OutputSheet"
     )
 
+# comparison CC model info
 comp_mods <-
   model_dirs %>%
   dplyr::filter(
@@ -96,8 +98,8 @@ get_cc_outputs(
   title_size           = 10,
   xaxis_size           = 9,
   output_folder_name   = output_folder,
-  scenario_name,
-  save_path
+  scenario_name        = scenario_name,
+  save_path            = save_path
 )
 
 

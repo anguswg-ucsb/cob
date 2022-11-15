@@ -248,8 +248,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size
     )
 
     # add plot to list of plots
@@ -261,7 +261,7 @@ get_cc_outputs <- function(
 
   # define the plot name
   p1a_plot_title <- paste0("1a. May 1 Reservoir Contents (point)", " (", scenario_name, ")")
-  p1a_file_name  <- paste(plot_title,  " 2x2", sep = "")
+  p1a_file_name  <- paste(p1a_plot_title,  " 2x2", sep = "")
 
   # save the plot
   ggplot2::ggsave(
@@ -328,8 +328,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size
     )
 
     # add plot to list of plots
@@ -499,8 +499,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9,
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size,
       quantile_breaks  = FALSE
     )
 
@@ -579,8 +579,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9,
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size,
       quantile_breaks  = FALSE
     )
 
@@ -662,8 +662,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9,
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size,
       quantile_breaks  = FALSE
     )
 
@@ -744,8 +744,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9,
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size,
       quantile_breaks  = FALSE
     )
 
@@ -830,8 +830,8 @@ get_cc_outputs <- function(
       df               = extract_df,
       plot_title       = extract_df$Description[z],
       xaxis_title      = extract_df$Units[z],
-      plot_title_size  = 10,
-      xaxis_title_size = 9,
+      plot_title_size  = title_size,
+      xaxis_title_size = xaxis_size,
       quantile_breaks  = FALSE
     )
 

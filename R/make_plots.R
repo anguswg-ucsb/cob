@@ -44,8 +44,8 @@ make_ecdf_point_plot <- function(
       limits = c(0,1)
     ) +
     ggplot2::theme(
-      plot.title = ggplot2::element_text(size = title_size),
-      axis.title = ggplot2::element_text(size = xaxis_size)
+      plot.title = ggplot2::element_text(size = plot_title_size),
+      axis.title = ggplot2::element_text(size = xaxis_title_size)
     )
 
   return(extract_plot)
@@ -115,8 +115,8 @@ make_ecdf_step_plot <- function(
       limits = c(xaxis_min, xaxis_max)
       ) +
       ggplot2::theme(
-        plot.title = ggplot2::element_text(size = title_size),
-        axis.title = ggplot2::element_text(size = xaxis_size)
+        plot.title = ggplot2::element_text(size = plot_title_size),
+        axis.title = ggplot2::element_text(size = xaxis_title_size)
       )
 
   } else {
@@ -124,8 +124,8 @@ make_ecdf_step_plot <- function(
     extract_plot <-
       extract_plot +
       ggplot2::theme(
-        plot.title = ggplot2::element_text(size = title_size),
-        axis.title = ggplot2::element_text(size = xaxis_size)
+        plot.title = ggplot2::element_text(size = plot_title_size),
+        axis.title = ggplot2::element_text(size = xaxis_title_size)
       )
 
   }
