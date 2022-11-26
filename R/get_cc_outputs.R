@@ -41,6 +41,7 @@ get_cc_outputs <- function(
   # check if directory already exists, if it doesn't create the directory
   if (!dir.exists(output_dir)) {
 
+
     message(paste0("Creating output folder:\n--->  ", output_dir))
 
     dir.create(output_dir)
