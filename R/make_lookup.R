@@ -1,11 +1,9 @@
+
+
 make_lookup <- function(
     output_path,
     verbose = TRUE
 ) {
-  # output_path <- path_lst[[4]]$path[1]
-  # output_path <- path_lst[[6]]$path[2]
-  # model_ver   <- path_lst[[6]]$model_version[2]
-  # output_path <- path_df$path[4]
 
   if(verbose == TRUE) {
     message(paste0("Creating lookup table...",

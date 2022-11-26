@@ -10,57 +10,30 @@ get_cc_outputs <- function(
     save_path
 ) {
 
-
-
-
   # # Model versions
   # base_model_version        <-  paste0("v", base_mods$model_version)
   # compare_model_version     <-  paste0("v", comp_mods$model_version)
-  #
   # # version text strings
   # base_model_version_text    <- base_mods$model_version
   # compare_model_version_text <- comp_mods$model_version
-  #
   # # model IDs
   # base_model_ID        <- base_mods$model_id
   # compare_model_ID     <- comp_mods$model_id
-  #
   # # model ID suffix
   # base_model_ID_suffix    <- ""        # if this is not needed, keep blank ""
   # compare_model_ID_suffix <- ""        # if this is not needed, keep blank ""
-  #
   # # climate scenerios
   # base_climate         <- base_mods$model_num
   # compare_climate      <- comp_mods$model_num
-  #
   # # model prefixes
   # base_model_ID_prefix    <- base_mods$prefix
   # compare_model_ID_prefix <- comp_mods$prefix
-  #
   # # Extra info text that would be found between the model version and the model ID in the file name
   # base_model_extra_info    <- base_mods$extra_info
   # compare_model_extra_info <- comp_mods$extra_info
-  #
   # # no compact calls or compact calls data
   # base_model_ID_suffix    <- "nocc"        # no compact call (nocc)
   # compare_model_ID_suffix <- "cc"           # compact call ON (cc)
-
-
-  # # scenario print name
-  # scenario_name <- paste0(
-  #   base_mods$model_id[1], "-", base_mods$model_num[1], "_", base_mods$model_version[1], "_nocc",
-  #   " vs. ",
-  #   comp_mods$model_id[1], "-",comp_mods$model_num[1], "_", comp_mods$model_version[1], "_cc"
-  #   )
-  #
-  # # base_mods$path
-  #
-  # # output folder name
-  # output_folder <- paste0(
-  #   base_mods$model_id[1], "-", base_mods$model_num[1], "_", base_mods$model_version[1], "_nocc",
-  #   " vs. ",
-  #   comp_mods$model_id[1],  "-", comp_mods$model_num[1], "_", comp_mods$model_version[1], "_cc"
-  # )
 
   # Folder to hold all outputs/plots from this script
   output_dir <- paste0(save_path, "/", output_folder_name)
@@ -87,7 +60,7 @@ get_cc_outputs <- function(
   # analysis_years  = 4
 
   # get the total number of model runs (compact call + no compact call)
-  total_simulation_count <- nrow(comp_mods) * (analysis_years+1) * 2
+  total_simulation_count <- nrow(comp_mods) * (analysis_years + 1) * 2
 
   # dataframe of start, end years to index
   year_subs <-
@@ -98,32 +71,94 @@ get_cc_outputs <- function(
       end   = start + analysis_years
     )
 
+  if(length(comp_mods$scenario_name) != nrow(year_subs)){
+
+    # message(paste0("Adding model_run column (with dummy model_runs"))
+
+    # next model run after length of model runs
+    model_run_len    <- length(comp_mods$scenario_name) + 1
+
+    # create dummy model run names to fit year_subs dataframe
+    dummy_model_runs <- paste0(substr(comp_mods$scenario_name, 0, (nchar(comp_mods$scenario_name)-2))[1],  model_run_len:nrow(year_subs))
+
+    # join list of model runs w/ dummy model runs
+    model_run_lst    <- c(comp_mods$scenario_name, dummy_model_runs)
+
+    # add model run column
+    year_subs <-
+      year_subs %>%
+      dplyr::mutate(
+        model_run = model_run_lst
+      )
+
+  } else {
+
+    # message(paste0("Adding model_run column"))
+
+    # add model run
+    year_subs <-
+      year_subs %>%
+      dplyr::mutate(
+        model_run = comp_mods$scenario_name
+      )
+
+  }
+
   message(paste0("Loading NO comparison models..."))
+
+  # Read in and preprocess base model output run OutputSheet (NOCC)
+  base_output <- process_output(
+    file_df = base_mods[1,],
+    date_df = date_df,
+    verbose = FALSE
+  )
 
   # NO Compact calls data (nocc)
   # loop through NOCC/baseline dataset and filter each set into 4 year chunks
   nocc_df <- lapply(1:nrow(comp_mods), function(y) {
 
-    message(paste0(y, "/", nrow(comp_mods)))
+    message(paste0(y, "/", nrow(comp_mods), " - ", year_subs$model_run[y], " (", year_subs$start[y], " - ", year_subs$end[y], ")"))
 
-    output <- process_output(
-      file_df = base_mods[1,],
-      date_df = date_df,
-      verbose = FALSE
-    ) %>%
+    base_subset <-
+      base_output %>%
       dplyr::filter(
         year >= year_subs$start[y],
         year <= year_subs$end[y]
       ) %>%
       dplyr::mutate(
         compact_call = base_mods$compact_call[1],
-        model_run    = paste0(comp_mods$scenario_name[y], "b"),
+        model_run    = paste0(year_subs$model_run[y], "b"),
         model_group  = "no_compact_call"
       ) %>%
       dplyr::relocate(compact_call, model_run, model_group)
 
   }) %>%
     dplyr::bind_rows()
+
+  # NO Compact calls data (nocc)
+  # loop through NOCC/baseline dataset and filter each set into 4 year chunks
+  # nocc_df <- lapply(1:nrow(comp_mods), function(y) {
+  #
+  #   message(paste0(y, "/", nrow(comp_mods)))
+  #
+  #   output <- process_output(
+  #     file_df = base_mods[1,],
+  #     date_df = date_df,
+  #     verbose = FALSE
+  #   ) %>%
+  #     dplyr::filter(
+  #       year >= year_subs$start[y],
+  #       year <= year_subs$end[y]
+  #     ) %>%
+  #     dplyr::mutate(
+  #       compact_call = base_mods$compact_call[1],
+  #       model_run    = paste0(comp_mods$scenario_name[y], "b"),
+  #       model_group  = "no_compact_call"
+  #     ) %>%
+  #     dplyr::relocate(compact_call, model_run, model_group)
+  #
+  # }) %>%
+  #   dplyr::bind_rows()
 
   message(paste0("Loading compact call models..."))
 

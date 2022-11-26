@@ -18,15 +18,18 @@ library(gtable)
 library(grid)
 
 source("R/make_lookup.R")
+source("R/make_plots.R")
 source("R/process_output.R")
 source("R/process_demand.R")
 source("R/process_isf.R")
 source("R/process_quota.R")
+source("R/process_drought_index.R")
 source("R/process_annual_summary.R")
 source("R/parse_directory.R")
 source("R/utils.R")
 
-base_folder <- "D:/cob/latest/latest"
+# base_folder <- "D:/cob/latest/latest"
+base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
@@ -35,9 +38,20 @@ model_dirs  <- parse_directory(base_folder = base_folder)
 title_size = 10
 xaxis_size = 9
 
-# model_folder <- "latest"
-model_folder <- "D:/cob/latest/latest"
+# model number/climate
+mod_number <- "Base"
 
+# model version
+mod_version <- "055d"
+
+start_year = 1915
+end_year   = 2014
+
+# model_folder <- "latest"
+# model_folder <- "D:/cob/latest/latest"
+model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+
+save_path   <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob"
 device_type <- ".png"     # .png, .pdf
 
 # read in the quarter-monthly to date converter
@@ -58,142 +72,212 @@ quota_path <-
 quota_path
 
 # tmp2 <-
+# base_mods <-
+#   model_dirs %>%
+#   dplyr::filter(
+#     model_id %in% c("ID1"),
+#     model_version %in% mod_version,
+#     # extra_info %in% c("7525"),
+#     model_num %in% mod_number,
+#     # grepl("055c_3143_ID1_7525", file),
+#     output == "OutputSheet"
+#   ) %>%
+#   dplyr::group_by(model_version, model_id, model_num) %>%
+#   dplyr::slice(1) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::filter(
+#     name != "Quota",
+#     model_num == "7525"
+#     ) %>%
+#   dplyr::mutate(
+#     prefix = substr(file, 1, 4)
+#     # prefix = substr(file, 28, 31)
+#   ) %>%
+#   dplyr::select(prefix, model_version, model_id, model_num, extra_info, path)
 base_mods <-
   model_dirs %>%
   dplyr::filter(
-    model_id %in% c("ID1"),
-    model_version %in% c("055c"),
-    extra_info %in% c("3143"),
-    # grepl("055c_3143_ID1_7525", file),
-    output == "OutputSheet"
-  ) %>%
-  dplyr::group_by(model_version, model_id, model_num) %>%
-  dplyr::slice(1) %>%
-  dplyr::ungroup() %>%
-  dplyr::filter(
-    name != "Quota",
-    model_num == "7525"
-    ) %>%
-  dplyr::mutate(
-    prefix = substr(file, 1, 4)
-    # prefix = substr(file, 28, 31)
-  ) %>%
-  dplyr::select(prefix, model_version, model_id, model_num, extra_info, path)
+    grepl("0001.DRRP_DroughtPlan_2020_055d_CC_ID1_Base", file)
+    # output == "OutputSheet"
+  )
 
 comp_mods <-
   model_dirs %>%
   dplyr::filter(
-    model_id %in% c("ID1"),
-    model_version %in% c("055c"),
-    extra_info %in% c("8500"),
-    output == "OutputSheet"
-  ) %>%
-  dplyr::group_by(model_version, model_id, model_num) %>%
-  dplyr::slice(1) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(
-    prefix = substr(file, 1, 4)
-  ) %>%
-  dplyr::select(prefix, model_version, model_id, model_num, extra_info, path)
+      grepl("DRRP_DroughtPlan_2020_055d_8500NoBorrow4.5mgd_ID1_Base", file)
+      # output == "OutputSheet"
+    )
 
   # base model annual summary
   base_summary <-
-    model_dirs %>%
+    base_mods %>%
     dplyr::filter(
-      model_id %in% c("ID1"),
-      model_version %in% c("055c"),
-      extra_info %in% c("3143"),
       output == "OutputAnnualSummary"
     )
 
   # comparison model annual summary
   comp_summary <-
-    model_dirs %>%
+    comp_mods %>%
     dplyr::filter(
-      model_id %in% c("ID1"),
-      model_version %in% c("055c"),
-      extra_info %in% c("8500"),
       output == "OutputAnnualSummary"
     )
 
-  # Model versions
-  base_model_version        <-  paste0("v", base_mods$model_version)
-  compare_model_version     <-  paste0("v", comp_mods$model_version)
+  # Base output sheet
+  base_out <-
+    base_mods %>%
+    dplyr::filter(
+      output == "OutputSheet"
+    )
 
-  # version text strings
-  base_model_version_text    <- base_mods$model_version
-  compare_model_version_text <- comp_mods$model_version
-
-  # model IDs
-  base_model_ID        <- base_mods$model_id
-  compare_model_ID     <- comp_mods$model_id
-
-  # model ID suffix
-  base_model_ID_suffix    <- ""        # if this is not needed, keep blank ""
-  compare_model_ID_suffix <- ""        # if this is not needed, keep blank ""
-
-  # climate scenerios
-  base_climate         <- base_mods$model_num
-  compare_climate      <- comp_mods$model_num
-
-  # model prefixes
-  base_model_ID_prefix    <- base_mods$prefix
-  compare_model_ID_prefix <- comp_mods$prefix
-
-  # Extra info text that would be found between the model version and the model ID in the file name
-  base_model_extra_info    <- base_mods$extra_info
-  compare_model_extra_info <- comp_mods$extra_info
-
-  message(paste0("Base model ver: ", base_model_version,
-                 "\nBase model ID: ", base_model_ID,
-                 "\nBase model ID suffix: ", base_model_ID_suffix,
-                 "\nBase model climate: ", base_climate,
-                 "\nBase model ID prefix: ", base_model_ID_prefix
-  )
-  )
-  message(paste0("Comp model ver: ", compare_model_version,
-                 "\nComp model ID: ", compare_model_ID,
-                 "\nComp model ID suffix: ", compare_model_ID_suffix,
-                 "\nComp model climate: ", compare_climate,
-                 "\nComp model ID prefix: ", compare_model_ID_prefix
-  )
-  )
-
-
-  output_folder <- paste0(
-    base_model_ID, "-", base_climate, "-",  gsub("v", "",base_model_version), "-", base_model_ID_prefix,
-    ifelse(base_model_extra_info != "", paste0("-", base_model_extra_info), ""),
-    " vs. ",
-    compare_model_ID,  "-", compare_climate, "-",  gsub("v", "", compare_model_version), "-", compare_model_ID_prefix,
-    ifelse(compare_model_extra_info != "", paste0("-", compare_model_extra_info), "")
-  )
-
-  output_folder
-
-  # file_prefix
-  path_lst <- c(base_mods$path, comp_mods$path)
+  # comparison output sheet
+  comp_out <-
+    comp_mods %>%
+    dplyr::filter(
+      output == "OutputSheet"
+    )
 
   # Scenario names
   scenario_name <- c(
     paste0(
-      base_climate,  "-", base_model_ID,
-      ifelse(base_model_extra_info == "", "", paste0("_", base_model_extra_info)),
-      base_model_ID_suffix, "-",
-      base_model_version, "_", base_model_ID_prefix
-      ),
+      base_out$model_num,  "-", base_out$model_id,
+      ifelse(base_out$extra_info == "", "", paste0("_", base_out$extra_info)),
+      "-",
+      base_out$model_version
+    ),
     paste0(
-      compare_climate,  "-", compare_model_ID,
-      ifelse(compare_model_extra_info == "", "", paste0("_", compare_model_extra_info)),
-      compare_model_ID_suffix, "-",
-      compare_model_version, "_", compare_model_ID_prefix
-      )
+      comp_out$model_num,  "-", comp_out$model_id,
+      ifelse(comp_out$extra_info == "", "", paste0("_", comp_out$extra_info)),
+      "-",
+      comp_out$model_version
     )
+  )
+
+  # output folder
+  output_folder <- paste0(
+    base_out$model_id, "-", base_out$model_num, "-",  gsub("v", "", base_out$model_version),
+    ifelse(base_out$extra_info != "", paste0("-", base_out$extra_info), ""),
+    " vs. ",
+    comp_out$model_id,  "-", comp_out$model_num, "-",  gsub("v", "", comp_out$model_version),
+    ifelse(comp_out$extra_info != "", paste0("-", comp_out$extra_info), "")
+  )
+
+  # Folder to hold all outputs/plots from this script
+  # output_dir <- paste0(save_path, "/", output_folder)
+
+  # Folder to hold all outputs/plots from this script
+  output_dir <- paste0(save_path, "/output")
+
+  # check if directory already exists, if it doesn't create the directory
+  if (!dir.exists(output_dir)) {
+
+    message(paste0("Creating output folder:\n\n  ", output_dir))
+
+    # create /output directory
+    dir.create(output_dir)
+
+    # create model folder directory
+    dir.create(paste0(output_dir, "/", output_folder))
+
+  } else {
+
+    if(!dir.exists(paste0(output_dir, "/", output_folder))) {
+
+      message(paste0("Creating model comparison folder:\n\n  ", output_dir))
+
+      # create model folder directory
+      dir.create(paste0(output_dir, "/", output_folder))
+
+    } else {
+
+      # if model comparison folder already exists
+      message(paste0("Model comparison folder already exists:\n\n  ", output_dir, "/", output_folder))
+
+    }
+  }
+
+  # path to save out destination
+  model_comp_dir <- paste0(output_dir, "/", output_folder)
+  model_comp_dir
+  #
+#   # Model versions
+#   base_model_version        <-  paste0("v", base_mods$model_version)
+#   compare_model_version     <-  paste0("v", comp_mods$model_version)
+#
+#   # version text strings
+#   base_model_version_text    <- base_mods$model_version
+#   compare_model_version_text <- comp_mods$model_version
+#
+#   # model IDs
+#   base_model_ID        <- base_mods$model_id
+#   compare_model_ID     <- comp_mods$model_id
+#
+#   # model ID suffix
+#   base_model_ID_suffix    <- ""        # if this is not needed, keep blank ""
+#   compare_model_ID_suffix <- ""        # if this is not needed, keep blank ""
+#
+#   # climate scenerios
+#   base_climate         <- base_mods$model_num
+#   compare_climate      <- comp_mods$model_num
+#
+#   # model prefixes
+#   base_model_ID_prefix    <- base_mods$prefix
+#   compare_model_ID_prefix <- comp_mods$prefix
+#
+#   # Extra info text that would be found between the model version and the model ID in the file name
+#   base_model_extra_info    <- base_mods$extra_info
+#   compare_model_extra_info <- comp_mods$extra_info
+#
+#   message(paste0("Base model ver: ", base_model_version,
+#                  "\nBase model ID: ", base_model_ID,
+#                  "\nBase model ID suffix: ", base_model_ID_suffix,
+#                  "\nBase model climate: ", base_climate,
+#                  "\nBase model ID prefix: ", base_model_ID_prefix
+#   )
+#   )
+#   message(paste0("Comp model ver: ", compare_model_version,
+#                  "\nComp model ID: ", compare_model_ID,
+#                  "\nComp model ID suffix: ", compare_model_ID_suffix,
+#                  "\nComp model climate: ", compare_climate,
+#                  "\nComp model ID prefix: ", compare_model_ID_prefix
+#   )
+#   )
+
+  # output_folder <- paste0(
+  #   base_model_ID, "-", base_climate, "-",  gsub("v", "",base_model_version), "-", base_model_ID_prefix,
+  #   ifelse(base_model_extra_info != "", paste0("-", base_model_extra_info), ""),
+  #   " vs. ",
+  #   compare_model_ID,  "-", compare_climate, "-",  gsub("v", "", compare_model_version), "-", compare_model_ID_prefix,
+  #   ifelse(compare_model_extra_info != "", paste0("-", compare_model_extra_info), "")
+  # )
+
+  # output_folder
+
+  # file_prefix
+  # path_lst <- c(base_mods$path, comp_mods$path)
+
+  # Scenario names
+  # scenario_name <- c(
+  #   paste0(
+  #     base_climate,  "-", base_model_ID,
+  #     ifelse(base_model_extra_info == "", "", paste0("_", base_model_extra_info)),
+  #     base_model_ID_suffix, "-",
+  #     base_model_version, "_", base_model_ID_prefix
+  #   ),
+  #   paste0(
+  #     compare_climate,  "-", compare_model_ID,
+  #     ifelse(compare_model_extra_info == "", "", paste0("_", compare_model_extra_info)),
+  #     compare_model_ID_suffix, "-",
+  #     compare_model_version, "_", compare_model_ID_prefix
+  #   )
+  # )
+  scenario_name
 
   # names of columns to select from ISF dataset
   model_id_subs <- c(
-                    paste0(base_model_ID, base_climate),
-                    paste0(compare_model_ID, compare_climate)
+                    paste0(base_out$model_id, base_out$model_num),
+                    paste0(comp_out$model_id, comp_out$model_num)
                     )
+  model_id_subs
 
   # Load ISF data and select columns of interest
   isf_year_type <-
@@ -201,6 +285,7 @@ comp_mods <-
       isf_path = isf_path
       ) %>%
     dplyr::select(wyqm, days_in_qm, dplyr::contains(model_id_subs))
+  message(paste0("Plotting quota data"))
 
   # Read in the annual CBT Quota data ---------------------------------------
 
@@ -208,8 +293,8 @@ comp_mods <-
     process_quota(
       quota_path = quota_path,
       model_ids  = model_id_subs,
-      start_year = 1915,
-      end_year   = 2014
+      start_year = start_year,
+      end_year   = end_year
       )
 
   quota <-
@@ -222,27 +307,18 @@ comp_mods <-
       ) %>%
     dplyr::select(-scenario)
 
-
   levels(quota$model_run)
 
-  # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
-  p_quota <-
-    quota %>%
-    ggplot2::ggplot(aes(x = year, y = quota, color = model_run,  linetype = model_run)) +
-    ggplot2::geom_line() +  #col = color_list[i]
-    ggplot2::theme_bw() +
-    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
-    ggplot2::labs(
-      title = "Annual C-BT Quota",
-      x     = "Water Year"
-    ) +
-    ggplot2::theme(
-      plot.title = element_text(size = title_size),
-      axis.title = element_text(size = xaxis_size)
-      )
+  # quota plot
+  quota_plot <- make_quota_plot(
+    df         = quota,
+    title_size = title_size,
+    xaxis_size = xaxis_size
+    )
+  quota_plot
 
   # list of model dataframes
-  mod_lst <- list(base_mods, comp_mods)
+  mod_lst <- list(base_out, comp_out)
 
   # loop through model run output sheets and read in and process data
   outputs <- lapply(1:length(mod_lst), function(y) {
@@ -275,6 +351,12 @@ comp_mods <-
     col_names = FALSE
   )
 
+  # ******************
+  # ---- Table 1A ----
+  # ******************
+
+  message(paste0("Page - 1A"))
+
   mod_summary_lst <- list(base_summary, comp_summary)
 
   # loop through model run output sheets and read in and process data
@@ -290,68 +372,17 @@ comp_mods <-
   }) %>%
     dplyr::bind_rows()
 
-  # set up
-  drought.df <- data.frame(DroughtLevel = c(0, 1, 2, 3, 4))
-
-
-  # remove_rownames(extract)
-  # colnames(extract) <- c("ModelRun", "Drought Response", "Count", "Revised Count",
-  #                        "Adj Drought Response", "Precent", "Criteria", "Pass Fail")
-
-  # table specs/setup
-  size  <- 0.65
-  size1 <- 0.65
-
-  tt <-
-    gridExtra::ttheme_default(
-      core    = list(
-        fg_params = list(cex = size)
-        ),
-      colhead = list(fg_params=list(cex = size1)),
-      rowhead = list(fg_params=list(cex = size))
+  # Drought response table
+  tbl_temp <- make_drought_table(
+    df = data_annual_lst
     )
+  # grid.draw(tbl_temp)
 
-  # Table 2
-  tbl_temp2 <- gridExtra::tableGrob(
-      data_annual_lst,
-      theme = tt,
-      rows  = NULL
-    )
+  # *****************
+  # ---- Plot 1A ----
+  # *****************
 
-  # add box around the column headers
-  tbl_temp2 <- gtable::gtable_add_grob(
-      tbl_temp2,
-      grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      t = 1,
-      l = 1,
-      r = ncol(tbl_temp2)
-    )
-  # add box around the first model run of data
-  tbl_temp2 <- gtable::gtable_add_grob(
-      tbl_temp2,
-      grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      t = 2,
-      b = nrow(tbl_temp2),
-      l = 1,
-      r = ncol(tbl_temp2)
-    )
-
-  # add box around the second model run of data
-  tbl_temp2 <- gtable::gtable_add_grob(
-      tbl_temp2,
-      grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      t = 7,
-      b = nrow(tbl_temp2),
-      l = 1,
-      r = ncol(tbl_temp2)
-    )
-
-  grid.draw(tbl_temp2)
-
-  # output_df <- outputs
-  # model_run <- scenario_name[y]
-  # qm <- 29
-  # length(scenario_name)
+  # May 1 Annual PSI and Reservoir Storage Plots
 
   # loop through model run output sheets and extract drought indices for each model run
   drought_index <- lapply(1:length(scenario_name), function(y) {
@@ -364,14 +395,294 @@ comp_mods <-
     )
 
   }) %>%
-    dplyr::bind_rows()
+    dplyr::bind_rows() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = scenario_name)
+      )
+
+  # drought plots to loop over
+  drought_plot_lst <- na.omit(unique(drought_index$title))
+
+  drought_plots <- lapply(1:length(drought_plot_lst), function(z) {
+
+      extract_df <-
+        drought_index %>%
+        dplyr::filter(title == drought_plot_lst[z]) %>%
+        dplyr::rename("Model run" = model_run)
+
+      message(paste0("Plotting: ", drought_plot_lst[z]))
+
+      # Drought response plot
+      if(drought_plot_lst[z] == "Drought Response Level") {
+
+        dplot <- make_drought_response_plot(
+                    df         = extract_df,
+                    plot_name  = drought_plot_lst[z],
+                    ylab_title = unique(extract_df$ylabs),
+                    title_size = title_size,
+                    xaxis_size = xaxis_size
+                  )
+
+      }
+
+      # Drought response plot
+      if(drought_plot_lst[z] == "Projected Storage Index") {
+
+        dplot <- make_psi_plot(
+                      df         = extract_df,
+                      plot_name  = drought_plot_lst[z],
+                      ylab_title = unique(extract_df$ylabs),
+                      title_size = title_size,
+                      xaxis_size = xaxis_size
+                    )
+
+      }
+
+      # Drought response plot
+      if(!drought_plot_lst[z] %in% c("Projected Storage Index", "Drought Response Level")) {
+
+        dplot <- make_res_content_plot(
+          df                = extract_df,
+          plot_name         = drought_plot_lst[z],
+          ylab_title        = unique(extract_df$ylabs),
+          storage_max_hline = unique(extract_df$storage_max),
+          title_size        = title_size,
+          xaxis_size        = xaxis_size
+        )
+
+      }
+
+      dplot
+
+  }) %>%
+    stats::setNames(c(drought_plot_lst))
+
+  # save the plot
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "1a. May 1 Annual Reservoir Contents - Time Series Plot 3x2.png"),
+    width  = 16,
+    height = 8,
+    gridExtra::grid.arrange(
+      drought_plots[["Projected Storage Index"]],
+      drought_plots[["Drought Response Level"]],
+      drought_plots[["Barker Reservoir Contents"]],
+      drought_plots[["NBC Reservoir Contents"]],
+      drought_plots[["Total Upper Reservoir Contents"]],
+      tbl_temp,
+      nrow   = 3,
+      top    = "1a. May 1 Annual Reservoir Contents - Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+    )
+
+  # *****************
+  # ---- Plot 1B ----
+  # *****************
+  # Mass Balance by Source calculations and plots
+  message(paste0("Page - 1B"))
+
+  # calculate mass balance by source
+  mass_bal_source <-
+    outputs %>%
+    process_mass_balance_source() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+      )
+
+  # extra sites of interest (Not CBT_Inflow or WindyGap_)
+  mass_source_sites <- unique(mass_bal_source$name)[!grepl("CBT_Inflow|WindyGap_Inflow", unique(mass_bal_source$name))]
+
+  # loop through each site and plot
+  mass_bal_source_lst <- lapply(1:length(mass_source_sites), function(i) {
+
+    message(paste0("Plotting: ", mass_source_sites[i]))
+
+    extract_df <-
+      mass_bal_source %>%
+      dplyr::filter(name == mass_source_sites[i]) %>%
+      dplyr::rename("Model run" = model_run)
+
+    mass_bal_plot <- make_mass_balance_plot(
+      df         = extract_df,
+      plot_title = unique(extract_df$title),
+      yaxis_max  = unique(extract_df$ylabs_max),
+      title_size = title_size,
+      xaxis_size = xaxis_size
+    )
+
+    mass_bal_plot
+
+  }) %>%
+    stats::setNames(c(mass_source_sites))
+
+  # save the gridded mass balance plots
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "1b. Annual Supply by Water Type with Demands - Time Series Plot 3x2.png"),
+    width    = 14,
+    height   = 8,
+    plot     = gridExtra::arrangeGrob(
+      mass_bal_lst[["Direct_Flow_Rights"]],
+      mass_bal_lst[["Reservoir_Release"]],
+      mass_bal_lst[["Direct_Exchange"]],
+      mass_bal_lst[["COB_Water_Demand"]],
+      mass_bal_lst[["COB_Indoor_Demand"]],
+      mass_bal_lst[["COB_Outdoor_Demand"]],
+      nrow   = 3,
+      top    = "1b. Annual Supply by Water Type with Demands - Time Series Plot",
+      right  = "",
+      left   = "",
+      bottom = ""
+      )
+    )
 
 
+  # *****************
+  # ---- Plot 1C ----
+  # *****************
+
+  # Mass Balance by Source calculations and plots
+  message(paste0("Page - 1C"))
+
+  # calculate mass balance by source
+  mass_bal_pipe <-
+    outputs %>%
+    process_mass_balance_pipeline() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+    )
+
+  # extra mass balance pipeline sites of interest
+  mass_pipe_sites <- unique(mass_bal_pipe$name)
+
+  # loop through each site and plot
+  mass_bal_pipe_lst <- lapply(1:length(mass_pipe_sites), function(i) {
+
+    message(paste0("Plotting: ", mass_pipe_sites[i]))
+
+    extract_df <-
+      mass_bal_pipe %>%
+      dplyr::filter(name == mass_pipe_sites[i]) %>%
+      dplyr::rename("Model run" = model_run)
+
+    mass_bal_plot <- make_mass_balance_plot(
+      df         = extract_df,
+      plot_title = unique(extract_df$title),
+      yaxis_max  = unique(extract_df$ylabs_max),
+      title_size = title_size,
+      xaxis_size = xaxis_size
+    )
+
+    mass_bal_plot
+
+  }) %>%
+    stats::setNames(c(mass_pipe_sites))
+
+  # save the plot
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "1c. Annual Water Delivery by Pipeline - Time Series Plot 2x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      mass_bal_pipe_lst[["LakewoodtoBetasso"]],
+      mass_bal_pipe_lst[["BarkerGravitytoBetasso"]],
+      mass_bal_pipe_lst[["BoulderRestoWTP"]],
+      mass_bal_pipe_lst[["FarmersRighttoWTP"]],
+      nrow   = 2,
+      top    = "1c. Annual Water Delivery by Pipeline - Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # *****************
+  # ---- Plot 2C ----
+  # *****************
+
+  # *****************
+  # ---- Plot 2D ----
+  # *****************
+
+  # *****************
+  # ---- Plot 1F ----
+  # *****************
+
+  drought_plot_name = "Drought Response Level"
+
+
+  extract_df <-
+    drought_index %>%
+    dplyr::filter(title == drought_plot_name) %>%
+    dplyr::rename("Model run" = model_run)
+
+
+
+  ylab <- unique(extract_df$ylabs)
+
+  if(drought_plot_name == "Drought Response Level") {
+    make_drought_response_plot(
+      df = extract_df,
+      plot_name =
+    )
+  }
+
+
+  drought_index %>%
+    dplyr::filter(title == drought_plot_lst[1])
+  drought_plot_lst
+
+  ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                   color = "ModelRun", linetype = "ModelRun")) +
+    geom_line() + #col = color_list[i]
+    geom_hline(yintercept = 0.40, linetype="solid", color="red") +
+    geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
+    geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
+    geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
+    #geom_hline(yintercept = 1.0, linetype="solid", color="black") +
+    theme_bw() +
+    ylim(0, y_axis_max_list[i]) +
+    ylab(ylab_list[i]) +
+    xlab("Water Year") +
+    ggtitle(title_list[i]) +
+    theme(plot.title = element_text(size = title_size),
+          axis.title = element_text(size = xaxis_size))
+  #p[[i]]
+
+
+
+    p_drought_triggers <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                                           color = "ModelRun", linetype = "ModelRun")) +
+      geom_line() + #col = color_list[i]
+      theme_bw() +
+      ylim(0, y_axis_max_list[i]) +
+      ylab(ylab_list[i]) +
+      xlab("Water Year") +
+      ggtitle(title_list[i]) +
+      theme(plot.title = element_text(size = title_size),
+            axis.title = element_text(size = xaxis_size),
+            panel.grid.minor.y = element_blank())
+
+
+    # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
+    p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
+                                               color = "ModelRun", linetype = "ModelRun")) +
+      geom_line() + #col = color_list[i]
+      geom_hline(yintercept = storage_max_list[i], color = "black", size = 0.25) +
+      theme_bw() +
+      ylim(0, y_axis_max_list[i]) +
+      ylab(ylab_list[i]) +
+      xlab("Water Year") +
+      ggtitle(title_list[i]) +
+      theme(plot.title = element_text(size = title_size),
+            axis.title = element_text(size = xaxis_size))
+
+  drought_index$model_run
   # May 1 Annual PSI and Reservoir Storage Plots (1a) --------------------------------------------------------
 
-
+  drought_index
 
   drought_index_list <- list()
+
   for (i in 1:n_file_prefix){
 
     drought_index_list[[i]] <- data_list[[i]] %>%

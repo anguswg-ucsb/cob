@@ -1,3 +1,181 @@
+make_mass_balance_plot <- function(
+    df,
+    plot_title,
+    yaxis_max,
+    title_size,
+    xaxis_size
+) {
+
+  mass_bal_plot <-
+    df %>%
+    ggplot2::ggplot(
+      # ggplot2::aes(x = year, y = value, color = model_run, linetype = model_run)
+      ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
+    ) +
+    ggplot2::geom_line() +
+    ggplot2::ylim(0, yaxis_max) +
+    ggplot2::labs(
+      title = plot_title,
+      x     = "Water Year",
+     y     = "Flow (af)"
+     ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(mass_bal_plot)
+
+}
+
+make_drought_response_plot <- function(
+    df,
+    plot_name,
+    ylab_title,
+    title_size,
+    xaxis_size
+) {
+
+  drought_response_plot <-
+    df %>%
+    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::geom_line() +
+    ggplot2::theme_bw() +
+    ggplot2::labs(
+      title = plot_name,
+      x     = "Water Year",
+      y     = ylab_title
+    ) +
+    ggplot2::theme(
+      plot.title         = ggplot2::element_text(size = title_size),
+      axis.title         = ggplot2::element_text(size = xaxis_size),
+      panel.grid.minor.y = ggplot2::element_blank()
+    )
+
+  return(drought_response_plot)
+
+
+}
+
+make_psi_plot <- function(
+    df,
+    plot_name,
+    ylab_title,
+    title_size,
+    xaxis_size
+) {
+
+  psi_plot <-
+    df %>%
+    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_hline(yintercept = 0.40, linetype="solid", color="red") +
+    ggplot2::geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
+    ggplot2::geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
+    ggplot2::geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
+    ggplot2::theme_bw() +
+    ggplot2::labs(
+      title = plot_name,
+      x     = "Water Year",
+      y     = ylab_title
+    ) +
+    ggplot2::theme(
+      plot.title = element_text(size = title_size),
+      axis.title = element_text(size = xaxis_size)
+    )
+
+  return(psi_plot)
+
+
+}
+
+make_res_content_plot <- function(
+    df,
+    plot_name,
+    ylab_title,
+    storage_max_hline,
+    title_size,
+    xaxis_size
+) {
+
+  res_content_plot <-
+    df %>%
+    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_hline(yintercept = storage_max_hline, color = "black", size = 0.25) +
+    ggplot2::theme_bw() +
+    ggplot2::labs(
+      title = plot_name,
+      x     = "Water Year",
+      y     = ylab_title
+    ) +
+    ggplot2::theme(
+      plot.title = element_text(size = title_size),
+      axis.title = element_text(size = xaxis_size)
+    )
+
+  return(res_content_plot)
+
+
+}
+
+# Page 1 table
+make_drought_table <- function(
+    df,
+    core_size = 0.65,
+    col_size = 0.65,
+    row_size = 0.65
+) {
+
+  # df <- data_annual_lst
+  tt <-
+    gridExtra::ttheme_default(
+      core    = list(
+        fg_params = list(cex = core_size)
+      ),
+      colhead = list(fg_params=list(cex = col_size)),
+      rowhead = list(fg_params=list(cex = row_size))
+    )
+
+  # Table 2
+  tbl_temp <- gridExtra::tableGrob(
+    df,
+    theme = tt,
+    rows  = NULL
+  )
+
+  # add box around the column headers
+  tbl_temp <- gtable::gtable_add_grob(
+    tbl_temp,
+    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    t = 1,
+    l = 1,
+    r = ncol(tbl_temp)
+  )
+  # add box around the first model run of data
+  tbl_temp <- gtable::gtable_add_grob(
+    tbl_temp,
+    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    t = 2,
+    b = nrow(tbl_temp),
+    l = 1,
+    r = ncol(tbl_temp)
+  )
+
+  # add box around the second model run of data
+  tbl_temp <- gtable::gtable_add_grob(
+    tbl_temp,
+    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    t = 7,
+    b = nrow(tbl_temp),
+    l = 1,
+    r = ncol(tbl_temp)
+  )
+
+  return(tbl_temp)
+}
+
 make_ecdf_point_plot <- function(
     df               = NULL,
     plot_title       = NULL,
@@ -131,4 +309,34 @@ make_ecdf_step_plot <- function(
   }
 
   return(extract_plot)
+}
+
+
+make_quota_plot <- function(
+    df,
+    title_size = 10,
+    xaxis_size = 9
+) {
+
+  # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
+  p_quota <-
+    df %>%
+    dplyr::rename("Model run" = model_run) %>%
+    ggplot2::ggplot(aes(x = year, y = quota, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::geom_line() +  #col = color_list[i]
+    ggplot2::theme_bw() +
+    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
+    ggplot2::labs(
+      title = "Annual C-BT Quota",
+      x     = "Water Year"
+      # linetype = "Model Run"
+      # color = ""
+    ) +
+    ggplot2::theme(
+      plot.title = element_text(size = title_size),
+      axis.title = element_text(size = xaxis_size)
+    )
+
+  return(p_quota)
+
 }

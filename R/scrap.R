@@ -21,20 +21,11 @@ source("R/process_quota.R")
 source("R/parse_directory.R")
 source("R/utils.R")
 
-base_folder <- "D:/cob/latest/latest"
-
+# base_folder <- "D:/cob/latest/latest"
+base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
 
-# tmp <-
-#   model_dirs %>%
-#   dplyr::filter(
-#     model_id %in% c("ID1", "ID2")
-#   )
-#
-# tmp %>%
-#   dplyr::group_by(model_version, model_id, model_num) %>%
-#   dplyr::slice(1)
 
 # tmp2 <-
 base_mods <-
@@ -43,7 +34,7 @@ base_mods <-
     # model_id %in% c("ID1"),
     # model_version %in% c("055c")
     # output == "OutputSheet"
-    grepl("055c_3143_17mgd_ID1_7525", file),
+    grepl("DRRP_DroughtPlan_2020_055d_CC_ID1_7525", file),
      output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -70,9 +61,14 @@ comp_mods <-
     # model_id %in% c("ID2", "ID3", "ID5"),
     # model_id %in% c("ID2", "ID5"),
     # model_version %in% c("055a")
-    grepl("055c_8500_17mgd_ID1_7525", file),
+    model_num %in% c("7525"),
+    # grepl("8500NoBorrow4.5mgd_ID1", file),
+    grepl("8500NoBorrow17mgd_ID1", file),
+    # grepl("10000NoBorrow4.5mgd_ID1", file),
+    # grepl("10000NoBorrow4.5mgd_ID1", file),
     output == "OutputSheet"
   ) %>%
+  # dplyr::group_by(extra_info) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
@@ -87,20 +83,32 @@ comp_mods <-
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
+base_extra_txt <- "CC"
+comp_extra_txt <- "8500NoBorrow17mgd"
+# comp_extra_txt <- "10000NoBorrow4.5mgd"
 
 # comp_mod_size = "8500"
 # base_mod_size = "3143"
 # z = 1
 # k = 1
+base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
+# currwd               <- "D:/cob/latest/latest"
+currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+
+# model_folder <- "D:/cob/latest/latest"
+model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# z = 1
+# k = 1
 # iterate through base models
 for(z in 1:nrow(base_mods)) {
 
-
   # base folder path
-  base_folder          <- "D:/cob/latest/latest"
-
-  currwd               <- "D:/cob/latest/latest"
+  # base_folder          <- "D:/cob/latest/latest"
+  # base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
+  #
+  # # currwd               <- "D:/cob/latest/latest"
+  # currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
 
   # message(paste0("Base model: ", z, "/", nrow(base_mods)))
 
@@ -174,7 +182,9 @@ for(z in 1:nrow(base_mods)) {
       xaxis_size = 9
 
       # model_folder <- "latest"
-      model_folder <- "D:/cob/latest/latest"
+      # model_folder <- "D:/cob/latest/latest"
+
+      # model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
 
       device_type <- ".png"     # .png, .pdf
 
@@ -184,9 +194,9 @@ for(z in 1:nrow(base_mods)) {
 
       output_folder <-
         paste0(
-          base_model_ID, "-", base_climate,  "-", gsub("v", "", model_version), "-", base_model_ID_prefix,
+          base_model_ID, "-", base_climate,  "-", gsub("v", "", model_version), "-", base_extra_txt,
           " vs ",
-          compare_model_ID, "-", compare_climate, "-", gsub("v", "", compare_model_version), "-", compare_model_ID_prefix
+          compare_model_ID, "-", compare_climate, "-", gsub("v", "", compare_model_version), "-", comp_extra_txt
         )
 
       model_version_text <- substr(model_version, start = 2, stop = nchar(model_version))
@@ -222,19 +232,20 @@ for(z in 1:nrow(base_mods)) {
       #                         compare_model_version_text, "_",
       #                         base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
 
+
       file_prefix <- c(paste0(
         # base_model_ID_prefix,
         # "DRRP_DroughtPlan_2020_",
         ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-        model_version_text, "_8500_17mgd_",
+        model_version_text, "_", base_extra_txt, "_",
         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
         paste0(
           # compare_model_ID_prefix,
           # "DRRP_DroughtPlan_2020_",
           ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                  paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-          compare_model_version_text, "_3143_17mgd_",
+          compare_model_version_text,  "_", comp_extra_txt, "_",
           base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
       n_file_prefix <- length(file_prefix)
       # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
@@ -242,10 +253,12 @@ for(z in 1:nrow(base_mods)) {
       #                    paste(base_climate, "-", base_model_ID, "_", model_version,
       #                          base_model_ID_suffix, "_", base_model_ID_prefix, "_3143", sep = ""))
 
-      scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_17mgd_", compare_model_ID_suffix,
-                               compare_model_version, "_", compare_model_ID_prefix, sep = ""),
-                         paste(base_climate, "-", base_model_ID, "_3143_17mgd_",  model_version,
-                               base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
+      scenario_name <- c(
+                         paste(base_climate, "-", base_model_ID,"_", base_extra_txt, "_",  model_version,
+                               base_model_ID_suffix, sep = ""),
+                         paste(compare_climate, "-", compare_model_ID, "_", comp_extra_txt, "_", compare_model_ID_suffix,
+                               compare_model_version,  sep = "")
+                         )
       scenario_name
       n_scenario_name <- length(scenario_name)
 
@@ -1032,7 +1045,6 @@ for(z in 1:nrow(base_mods)) {
       #   p[[i]]
       #
       # }
-
 
       # # define the plot name
       # plot_title <- "Annual Supply by Water Type - Time Series Plot"
@@ -1907,7 +1919,7 @@ for(z in 1:nrow(base_mods)) {
 
       ggsave(
         filename =  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",                    output_folder, ".png", sep = ""),
-        width = 12,
+        width = 14,
         height = 8,
         tbl_temp_a2
              )

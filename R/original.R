@@ -940,11 +940,7 @@ levels(water_by_pipe$ModelRun)
 
 
 
-### Time Series Plots for demand met by source ###
-site_list <- c("LakewoodtoBetasso", "BarkerGravitytoBetasso",
-               "BoulderRestoWTP", "FarmersRighttoWTP")
-title_list <- c("Lakewood Pipeline to Betasso WTP", "Barker Gravity Line to Betasso WTP",
-                "Boulder Reservoir to 63rd St WTP", "Farmers Right to WTP")
+w
 n_site_list <- length(site_list)
 #color_list <- brewer.pal(4, "Set1")
 # y_axis_max_list <- c(12000, 12000, 6000, 3000)
