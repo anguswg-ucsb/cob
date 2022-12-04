@@ -20,12 +20,18 @@ library(grid)
 source("R/process_quota.R")
 source("R/parse_directory.R")
 source("R/utils.R")
+# Set 2: Boulder Reusable supply model suite update (Roger is still running these)
 
-# base_folder <- "D:/cob/latest/latest"
-base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# Re-run the ID1, ID2, ID3, ID5 suite of models (base/7525) with v055ac (see row 16 in sheet below)
+
+# https://docs.google.com/spreadsheets/d/16yL1AW80Uqo0tNd9LOYPi2vCGPcJ4AfsYhakgoO4bGg/edit?hl=en&forcehl=1#gid=0
+# Data: \10114 City of Boulder\2022 Modeling\Model Runs\Reusable Supply Model Runs\v055ac
+
+base_folder <- "D:/cob/latest/latest"
+# base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# base_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
-
 
 # tmp2 <-
 base_mods <-
@@ -34,7 +40,7 @@ base_mods <-
     # model_id %in% c("ID1"),
     # model_version %in% c("055c")
     # output == "OutputSheet"
-    grepl("DRRP_DroughtPlan_2020_055d_CC_ID1_7525", file),
+    grepl("0000.DRRP_DroughtPlan_2020_055ac_CC_ID1_Base", file),
      output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -61,11 +67,11 @@ comp_mods <-
     # model_id %in% c("ID2", "ID3", "ID5"),
     # model_id %in% c("ID2", "ID5"),
     # model_version %in% c("055a")
-    model_num %in% c("7525"),
+    # model_num %in% c("7525"),
     # grepl("8500NoBorrow4.5mgd_ID1", file),
-    grepl("8500NoBorrow17mgd_ID1", file),
-    # grepl("10000NoBorrow4.5mgd_ID1", file),
-    # grepl("10000NoBorrow4.5mgd_ID1", file),
+    grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
+    # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID3_7525", file),
+    # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID5_7525", file),
     output == "OutputSheet"
   ) %>%
   # dplyr::group_by(extra_info) %>%
@@ -73,10 +79,10 @@ comp_mods <-
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
   # dplyr::filter(name != "Quota", model_num == "7525") %>%
-  dplyr::mutate(
-    # model_id = paste0(model_id, "_", "ID1")
-    model_id = paste0("ID1")
-  ) %>%
+  # dplyr::mutate(
+  #   model_id = paste0(model_id, "_", "ID1")
+  #   # model_id = paste0("ID1")
+  # ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
      # prefix = substr(file, 28, 31)
@@ -84,22 +90,26 @@ comp_mods <-
   dplyr::select(prefix, model_version, model_id, model_num)
 
 base_extra_txt <- "CC"
-comp_extra_txt <- "8500NoBorrow17mgd"
+comp_extra_txt <- "CC"
 # comp_extra_txt <- "10000NoBorrow4.5mgd"
 
 # comp_mod_size = "8500"
 # base_mod_size = "3143"
 # z = 1
 # k = 1
-base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
-# currwd               <- "D:/cob/latest/latest"
-currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+currwd               <- "D:/cob/latest/latest"
+# currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# currwd <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+# model_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+# isf_path <- "D:/cob/latest/latest"
+model_folder <- "D:/cob/latest/latest"
+# model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
-# model_folder <- "D:/cob/latest/latest"
-model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 # z = 1
 # k = 1
+
 # iterate through base models
 for(z in 1:nrow(base_mods)) {
 
