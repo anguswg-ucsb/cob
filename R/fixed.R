@@ -25,11 +25,13 @@ source("R/process_isf.R")
 source("R/process_quota.R")
 source("R/process_drought_index.R")
 source("R/process_annual_summary.R")
+source("R/process_mass_balance.R")
+source("R/process_reuse_water_exchange.R")
 source("R/parse_directory.R")
 source("R/utils.R")
 
-# base_folder <- "D:/cob/latest/latest"
-base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+base_folder <- "D:/cob/latest/latest"
+# base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
@@ -48,10 +50,12 @@ start_year = 1915
 end_year   = 2014
 
 # model_folder <- "latest"
-# model_folder <- "D:/cob/latest/latest"
-model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+model_folder <- "D:/cob/latest/latest"
+# model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 
-save_path   <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob"
+save_path   <- "D:/cob/latest/latest"
+
+# save_path   <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob"
 device_type <- ".png"     # .png, .pdf
 
 # read in the quarter-monthly to date converter
@@ -97,14 +101,14 @@ quota_path
 base_mods <-
   model_dirs %>%
   dplyr::filter(
-    grepl("0001.DRRP_DroughtPlan_2020_055d_CC_ID1_Base", file)
+    grepl("DRRP_DroughtPlan_2020_055a_ID1_7525", file)
     # output == "OutputSheet"
   )
 
 comp_mods <-
   model_dirs %>%
   dplyr::filter(
-      grepl("DRRP_DroughtPlan_2020_055d_8500NoBorrow4.5mgd_ID1_Base", file)
+      grepl("DRRP_DroughtPlan_2020_055a_ID2_7525", file)
       # output == "OutputSheet"
     )
 
@@ -303,11 +307,15 @@ comp_mods <-
       dplyr::mutate(quota, scenario = scenario_name[2])
       ) %>%
     dplyr::mutate(
-      model_run = factor(scenario, levels = c(scenario_name))
+      model_run = factor(scenario, levels = c(rev(scenario_name)))
       ) %>%
     dplyr::select(-scenario)
 
   levels(quota$model_run)
+
+  # ********************
+  # ---- Quota plot ----
+  # ********************
 
   # quota plot
   quota_plot <- make_quota_plot(
@@ -397,7 +405,7 @@ comp_mods <-
   }) %>%
     dplyr::bind_rows() %>%
     dplyr::mutate(
-      model_run = factor(model_run, levels = scenario_name)
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
       )
 
   # drought plots to loop over
@@ -479,6 +487,7 @@ comp_mods <-
   # *****************
   # ---- Plot 1B ----
   # *****************
+
   # Mass Balance by Source calculations and plots
   message(paste0("Page - 1B"))
 
@@ -487,7 +496,7 @@ comp_mods <-
     outputs %>%
     process_mass_balance_source() %>%
     dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
       )
 
   # extra sites of interest (Not CBT_Inflow or WindyGap_)
@@ -522,12 +531,12 @@ comp_mods <-
     width    = 14,
     height   = 8,
     plot     = gridExtra::arrangeGrob(
-      mass_bal_lst[["Direct_Flow_Rights"]],
-      mass_bal_lst[["Reservoir_Release"]],
-      mass_bal_lst[["Direct_Exchange"]],
-      mass_bal_lst[["COB_Water_Demand"]],
-      mass_bal_lst[["COB_Indoor_Demand"]],
-      mass_bal_lst[["COB_Outdoor_Demand"]],
+      mass_bal_source_lst[["Direct_Flow_Rights"]],
+      mass_bal_source_lst[["Reservoir_Release"]],
+      mass_bal_source_lst[["Direct_Exchange"]],
+      mass_bal_source_lst[["COB_Water_Demand"]],
+      mass_bal_source_lst[["COB_Indoor_Demand"]],
+      mass_bal_source_lst[["COB_Outdoor_Demand"]],
       nrow   = 3,
       top    = "1b. Annual Supply by Water Type with Demands - Time Series Plot",
       right  = "",
@@ -549,7 +558,7 @@ comp_mods <-
     outputs %>%
     process_mass_balance_pipeline() %>%
     dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
     )
 
   # extra mass balance pipeline sites of interest
@@ -595,18 +604,169 @@ comp_mods <-
     )
   )
 
+  # **********************
+  # ---- Plot 2C + 2D ----
+  # **********************
+
+  # CBT, Windy Gap, Reusable Water Exchange Analysis
+  reuse_water_exchange <-
+    outputs %>%
+    process_reuse_water_exchange() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
+    )
+
+  # extra mass balance pipeline sites of interest
+  reuse_sites <- unique(reuse_water_exchange$name)
+
+  # loop through each site and plot
+  reuse_water_lst <- lapply(1:length(reuse_sites), function(i) {
+
+    message(paste0("Plotting: ", reuse_sites[i]))
+
+    extract_df <-
+      reuse_water_exchange %>%
+      dplyr::filter(name == reuse_sites[i]) %>%
+      dplyr::rename("Model run" = model_run)
+
+    reuse_plot <- make_reuse_water_exchange_plots(
+      df         = extract_df,
+      plot_title = unique(extract_df$title),
+      ylab_title = unique(extract_df$ylabs_title),
+      yaxis_max  = unique(extract_df$ylabs_max),
+      title_size = title_size,
+      xaxis_size = xaxis_size
+    )
+
+    reuse_plot
+
+  }) %>%
+    stats::setNames(c(reuse_sites))
+
+  # save the plot 2C
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2c. CBT-Windy Gap Exchange Total Annual - Time Series Plot 3x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      reuse_water_lst[["CBT_Inflow"]],
+      quota_plot,
+      reuse_water_lst[["WindyGap_Inflow"]],
+      reuse_water_lst[["BoulderRes_WGExchtoBarker"]],
+      reuse_water_lst[["BoulderRes_WGExchtoNBCRes"]],
+      reuse_water_lst[["BoulderRes_WGExctoUpperStor"]],
+      nrow   = 3,
+      top    = "2c. CBT-Windy Gap Exchange Total Annual - Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # save plot 2D
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2d. Reusable Water Annual Storage - Time Series Plot 3x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      reuse_water_lst[["WindyGap_Inflow"]],
+      reuse_water_lst[["BoulderRes_WGExctoUpperStor"]],
+      reuse_water_lst[["BarkerRes_ReusableWater"]],
+      reuse_water_lst[["NBCRes_ReusableWater"]],
+      reuse_water_lst[["BoulderRes_ReusableWater"]],
+      reuse_water_lst[["COB_Reusable_Contents"]],
+      nrow   = 3,
+      top    = "2d. Reusable Water Annual Storage - Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # ***********************
+  # ---- Plot 2A + 2AB ----
+  # ***********************
+
+  # CBT, Windy Gap, Reusable Water Exchange Analysis
+  cbt_quota <-
+    outputs %>%
+    process_cbt_quota(quota_df = quota) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(rev(scenario_name))),
+      year = as.numeric(year)
+    )
+
+  # unique quota runs
+  cbt_quota_runs <- unique(cbt_quota$model_run)
+
+  # loop through each site and plot
+  cbt_quota_component_lst <- lapply(1:length(cbt_quota_runs), function(i) {
+
+    message(paste0("Plotting: ", cbt_quota_runs[i]))
+    cbt_component_plot <-
+      make_cbt_component_plot(
+                df         = cbt_quota,
+                mod_run    = cbt_quota_runs[i],
+                title_size = title_size,
+                xaxis_size = xaxis_size
+              )
+
+    cbt_component_plot
+
+  }) %>%
+    stats::setNames(c(cbt_quota_runs))
+
+  # loop through each site and plot
+  cbt_quota_summary_lst <- lapply(1:length(cbt_quota_runs), function(i) {
+
+    message(paste0("Plotting: ", cbt_quota_runs[i]))
+
+    cbt_summary_plot <-
+      make_cbt_summary_plot(
+            df         = cbt_quota,
+            mod_run    = cbt_quota_runs[i],
+            title_size = title_size,
+            xaxis_size = xaxis_size
+          )
+    cbt_summary_plot
+
+  }) %>%
+    stats::setNames(c(cbt_quota_runs))
+
+  # save plot 2A
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2a. C-BT Annual Water Use 2x1.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      cbt_quota_component_lst[[cbt_quota_runs[[1]]]],
+      cbt_quota_component_lst[[cbt_quota_runs[[2]]]],
+      nrow   = 2,
+      top    = "2a. C-BT Annual Water Use",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # save plot 2AB
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2ab. COB C-BT Annual Unused Water 2x1.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      cbt_quota_summary_lst[[cbt_quota_runs[[1]]]],
+      cbt_quota_summary_lst[[cbt_quota_runs[[2]]]],
+      nrow   = 2,
+      top    = "2ab. COB C-BT Annual Unused Water",
+      right  = "",
+      bottom = ""
+    )
+  )
   # *****************
   # ---- Plot 2C ----
   # *****************
 
-  # *****************
-  # ---- Plot 2D ----
-  # *****************
-
-  # *****************
-  # ---- Plot 1F ----
-  # *****************
-
+  # *********************
+  # ---- Plot  ----
+  # *********************
   drought_plot_name = "Drought Response Level"
 
 

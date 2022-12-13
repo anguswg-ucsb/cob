@@ -32,7 +32,7 @@ base_folder <- "D:/cob/latest/latest"
 # base_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
-
+# 0101.DRRP_DroughtPlan_2020_055d_CC_ID1_7525.OutputSheet
 # tmp2 <-
 base_mods <-
   model_dirs %>%
@@ -40,7 +40,7 @@ base_mods <-
     # model_id %in% c("ID1"),
     # model_version %in% c("055c")
     # output == "OutputSheet"
-    grepl("0000.DRRP_DroughtPlan_2020_055ac_CC_ID1_Base", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_CC_ID1", file),
      output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -69,8 +69,8 @@ comp_mods <-
     # model_version %in% c("055a")
     # model_num %in% c("7525"),
     # grepl("8500NoBorrow4.5mgd_ID1", file),
-    grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
-    # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID3_7525", file),
+    # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
+    grepl("DRRP_DroughtPlan_2020_055e_8500NoBorrow17mgd_ID1", file),
     # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID5_7525", file),
     output == "OutputSheet"
   ) %>%
@@ -90,7 +90,7 @@ comp_mods <-
   dplyr::select(prefix, model_version, model_id, model_num)
 
 base_extra_txt <- "CC"
-comp_extra_txt <- "CC"
+comp_extra_txt <- "8500NoBorrow17mgd"
 # comp_extra_txt <- "10000NoBorrow4.5mgd"
 
 # comp_mod_size = "8500"
@@ -249,15 +249,17 @@ for(z in 1:nrow(base_mods)) {
         ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
         model_version_text, "_", base_extra_txt, "_",
-        compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
+        base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""),
         paste0(
           # compare_model_ID_prefix,
           # "DRRP_DroughtPlan_2020_",
           ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
                  paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
           compare_model_version_text,  "_", comp_extra_txt, "_",
-          base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
+          compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""))
+
       n_file_prefix <- length(file_prefix)
+
       # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
       #                          compare_model_version, "_", compare_model_ID_prefix, "_8500", sep = ""),
       #                    paste(base_climate, "-", base_model_ID, "_", model_version,
@@ -1244,7 +1246,8 @@ for(z in 1:nrow(base_mods)) {
           # now, group data by Year & ModelRun to sum data annually
           group_by(year, ModelRun) %>%
           # sum the sources by year
-          summarize(CBT_Inflow = sum(Decree_75_Flow), WindyGap_Inflow = sum(Link_499_Flow),
+          summarize(
+            CBT_Inflow = sum(Decree_75_Flow), WindyGap_Inflow = sum(Link_499_Flow),
                     BoulderRes_WGtoCity = sum(BoulderResWGtoCity),
                     SBC_ISF = sum(Link_350_Flow),
                     BarkerRes_ReusableWater = max(DataObject_28_Flow),  #max storage by year
@@ -1280,12 +1283,21 @@ for(z in 1:nrow(base_mods)) {
 
 
       ### Plot the annual time series ###
-      site_list <- c("CBT_Inflow", "WindyGap_Inflow",
-                     "BoulderRes_WGExchtoBarker", "BoulderRes_WGExchtoNBCRes",
-                     "BoulderRes_WGExctoUpperStor", "BoulderRes_WGtoCity",
-                     "SBC_ISF", "BarkerRes_ReusableWater", "NBCRes_ReusableWater",
-                     "BoulderRes_ReusableWater", "COB_Reusable_Contents")
-      title_list <- c("C-BT Inflow", "Windy Gap Inflow",
+      site_list <- c("CBT_Inflow",
+                     "WindyGap_Inflow",
+                     "BoulderRes_WGExchtoBarker",
+                     "BoulderRes_WGExchtoNBCRes",
+                     "BoulderRes_WGExctoUpperStor",
+                     "BoulderRes_WGtoCity",
+                     "SBC_ISF",
+                     "BarkerRes_ReusableWater",
+                     "NBCRes_ReusableWater",
+                     "BoulderRes_ReusableWater",
+                     "COB_Reusable_Contents"
+                     )
+      title_list <- c(
+        "C-BT Inflow",
+                      "Windy Gap Inflow",
                       "Boulder Reservoir: Windy Gap Exch. to Barker Res",
                       "Boulder Reservoir: Windy Gap Exch. to NBC Res",
                       "Boulder Reservoir: Windy Gap Total Exch to Upper Storage",
@@ -1294,7 +1306,8 @@ for(z in 1:nrow(base_mods)) {
                       "Barker Reservoir: Maximum Annual Reusable Water",
                       "NBC Reservoir: Maximum Annual Reusable Water",
                       "Boulder Reservoir: Maximum Annual Reusable Water",
-                      "Barker + NBC + Boulder: Maximum Annual Reusable Contents")
+                      "Barker + NBC + Boulder: Maximum Annual Reusable Contents"
+                      )
       n_site_list <- length(site_list)
       y_axis_max_list <- c(18000, 18000, 4000, 4000, 4000, 3500, 50000, 12000, 12000, 12000, 20000)
       y_lab_list <- c(rep("Flow (af)", 7), rep("Contents (af)", 4))
@@ -2670,19 +2683,33 @@ for(z in 1:nrow(base_mods)) {
 
       rm(cbt_windygap, cbt_windygap2, extract, extract2, final, final_site_list, n_final_site_list)
 
+#       Plot 2k shows Boulder Reservoir data. Can you modify this so it's the following:
+# DataObject_1_Flow (COB CBT Water)
+# DataObject_29_Flow (COB WG Water)
+# NEW MUTATE OBJECT NAME = DataObject_1_Flow + DataObject_29_Flow (COB Total Boulder Res Storage)
+#
+# Plot 2L is then modified to show Boulder Reservoir summary
+# NEW MUTATE OBJECT NAME = DataObject_1_Flow + DataObject_29_Flow (COB Total Boulder Res Storage) (same as above)
+# DataObject_2_Flow (Northern Boulder Res Water)
+# Reservoir_13_Contents (Total Boulder Res Storage)
+
 
 
       # CBT WG Boulder Res qm output 2k -----------------------------------------
-
+# i <- 1
+      rm(i)
       extract <- list()
       for (i in 1:n_file_prefix){
 
-        extract_list[[i]] <- data_list[[i]] %>%
+        extract_list[[i]] <-
+          data_list[[i]] %>%
           # group by ModelRun to calculate values by group
           group_by(ModelRun) %>%
           # select the columns of interest from the vector above using !!!syms to read it properly
-          select("year", "qm", "Date", "ModelRun", "DataObject_29_Flow", "DataObject_1_Flow",
-                 "DataObject_30_Flow") %>%
+          select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow") %>%
+          dplyr::group_by(year, Date, ModelRun) %>%
+          dplyr::mutate(COB_Total_Boulder_Res_Storage = DataObject_1_Flow + DataObject_29_Flow) %>%
+          dplyr::ungroup() %>%
           # now, group data by Year & ModelRun to sum data annually
           group_by(year, ModelRun)
 
@@ -2703,14 +2730,34 @@ for(z in 1:nrow(base_mods)) {
 
 
       # put to long form
-      extract2 <- extract %>%
+      extract2 <-
+        extract %>%
         # convert from 'wide' to 'long' format for plotting w/ ggplot
-        pivot_longer(., cols = c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_30_Flow"),
-                     names_to = "Name", values_to = "Output")
-      extrac2_site_list <- c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_30_Flow")
+        pivot_longer(., cols = c("DataObject_1_Flow", "DataObject_29_Flow", "COB_Total_Boulder_Res_Storage"),
+                     names_to = "Name", values_to = "Output") %>%
+        dplyr::left_join(
+          definitions,
+          by = "Name"
+        ) %>%
+        dplyr::mutate(
+          Description = dplyr::case_when(
+            Name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
+            TRUE                                    ~ Description
+          ),
+          Name = dplyr::case_when(
+            Name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
+            TRUE                                    ~ Name
+          ),
+          Units = dplyr::case_when(
+            Name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
+            TRUE                                    ~ Units
+          )
+        )
+      extrac2_site_list <- c("DataObject_1_Flow", "DataObject_29_Flow", "DataObject_1_Flow + DataObject_29_Flow")
       n_extrac2_site_list <- length(extrac2_site_list)
 
 
+      # i <- 1
       p <- list()
       for (i in 1:n_extrac2_site_list){
 
@@ -2718,6 +2765,9 @@ for(z in 1:nrow(base_mods)) {
         extract_plot <- extract2 %>%
           filter(Name == extrac2_site_list[i])
 
+        ylab = unique(extract_plot$Units)
+        title_name <- unique(extract_plot$Name)
+        desc <- unique(extract_plot$Description)
 
         # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
         p[[i]] <- ggplot(extract_plot, aes_string(x = "Date", y = "Output", color = "ModelRun",
@@ -2725,9 +2775,11 @@ for(z in 1:nrow(base_mods)) {
           geom_line() +
           theme_bw() +
           ylim(0, NA) +
-          ylab(y_lab_list[i]) +
-          xlab("Water Year") +
-          ggtitle(extract_plot$Name[1]) +
+          ggplot2::labs(
+            title = paste0(title_name, " - ", desc),
+            y = ylab,
+            x = "Water Year"
+          ) +
           theme(plot.title = element_text(size = title_size),
                 axis.title = element_text(size = xaxis_size))
 
@@ -2744,7 +2796,7 @@ for(z in 1:nrow(base_mods)) {
         paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
               output_folder, device_type, sep = ""),
         width = 14, height = 8,
-        grid.arrange(p[[1]], p[[3]], p[[2]], nrow = 3,
+        grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
                      top = plot_title,
                      right = ""))
 
@@ -3916,15 +3968,19 @@ for(z in 1:nrow(base_mods)) {
 
   extract <- list()
 
-  # i <- 1
+
   for (i in 1:n_file_prefix){
 
     extract_list[[i]] <- data_list[[i]] %>%
       # group by ModelRun to calculate values by group
       group_by(ModelRun) %>%
       # select the columns of interest from the vector above using !!!syms to read it properly
-      select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_2_Flow",
-             "Reservoir_12_Content") %>%
+      select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow", "DataObject_2_Flow",
+             "Reservoir_13_Content") %>%
+      # select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow") %>%
+      dplyr::group_by(year, Date, ModelRun) %>%
+      dplyr::mutate(COB_Total_Boulder_Res_Storage = DataObject_1_Flow + DataObject_29_Flow) %>%
+      dplyr::ungroup() %>%
       # now, group data by Year & ModelRun to sum data annually
       group_by(year, ModelRun)
 
@@ -3947,20 +4003,42 @@ for(z in 1:nrow(base_mods)) {
   # put to long form
   extract2 <- extract %>%
     # convert from 'wide' to 'long' format for plotting w/ ggplot
-    pivot_longer(., cols = c("DataObject_1_Flow", "DataObject_2_Flow", "Reservoir_12_Content"),
-                 names_to = "Name", values_to = "Output")
-  extrac2_site_list <- c("DataObject_1_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
+    pivot_longer(., cols = c("COB_Total_Boulder_Res_Storage", "DataObject_2_Flow", "Reservoir_13_Content"),
+                 names_to = "Name", values_to = "Output") %>%
+  dplyr::left_join(
+    definitions,
+    by = "Name"
+  ) %>%
+    dplyr::mutate(
+      Description = dplyr::case_when(
+        Name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
+        TRUE                                    ~ Description
+      ),
+      Name = dplyr::case_when(
+        Name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
+        TRUE                                    ~ Name
+      ),
+      Units = dplyr::case_when(
+        Name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
+        TRUE                                    ~ Units
+      )
+    )
+  extrac2_site_list <- c("DataObject_1_Flow + DataObject_29_Flow", "DataObject_2_Flow", "Reservoir_13_Content")
   n_extrac2_site_list <- length(extrac2_site_list)
-
-
   y_lab_list <- c(rep("Flow (af)", 10), rep("Contents (af)", 3))
-  p <- list()
 
+  p <- list()
+# i <- 1
   for (i in 1:n_extrac2_site_list){
 
     # select 1 flow data to plot per i iteration of loop
-    extract_plot <- extract2 %>%
+    extract_plot <-
+      extract2 %>%
       filter(Name == extrac2_site_list[i])
+
+    ylab = unique(extract_plot$Units)
+    title_name <- unique(extract_plot$Name)
+    desc <- unique(extract_plot$Description)
 
 
     # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
@@ -3969,9 +4047,11 @@ for(z in 1:nrow(base_mods)) {
       geom_line() +
       theme_bw() +
       ylim(0, NA) +
-      ylab(y_lab_list[i]) +
-      xlab("Water Year") +
-      ggtitle(extract_plot$Name[1]) +
+      ggplot2::labs(
+        title = paste0(title_name, " - ", desc),
+        y = ylab,
+        x = "Water Year"
+      ) +
       theme(plot.title = element_text(size = title_size),
             axis.title = element_text(size = xaxis_size))
 

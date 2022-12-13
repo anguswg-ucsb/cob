@@ -79,4 +79,19 @@ cc_new_params <- function() {
 
 }
 
+cbt_new_params <- function() {
+  def_df <- data.frame(
+    Name       = c("Decree75_QM1_24", "Decree75_QM25_48", "COB_CBT_allotment",
+                   "COB_CBT_TotalUse", "COB_CBT_Unused", "COB_CBT_NormalUse",
+                   "COB_CBT_BorrowedWinter", "COB_CBT_YeartoYearDebt"
+    ),
+    Description = c("COB CBT use QM1-24",  "COB CBT use QM25-48",  "Annual CBT Allotment (af)",
+                    "COB Total CBT Water Used",  "COB Unused CBT Water",  "COB normal use of CBT water",
+                    "COB borrowed CBT winter water", "COB CBT debt water"),
+    Parameter   = c(rep("Flow", 8)),
+    Units       = c(rep("Flow (af)", 8))
+  )
 
+  return(def_df)
+
+}

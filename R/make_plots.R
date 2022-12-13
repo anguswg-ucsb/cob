@@ -1,3 +1,129 @@
+make_cbt_component_plot <- function(
+    df,
+    mod_run,
+    title_size,
+    xaxis_size
+) {
+
+  cbt_comp_plot <-
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(
+      data     = dplyr::filter(
+        df,
+        group     == "CBT Component",
+        model_run == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, fill = Description),
+      position = "stack",
+      stat     = 'identity',
+      color    = "black",
+      size     = 0.05
+    ) +
+    ggplot2::geom_line(
+      data     = dplyr::filter(
+        df,
+        group     == "Total CBT",
+        model_run == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, color = name),
+      size = 0.75
+    ) +
+    ggplot2::scale_color_manual(values = "black") +
+    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+    ggplot2::labs(
+      title = paste0(mod_run, ": CBT Water by Year"),
+      y = "Flow (af)",
+      x = "Water year"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(cbt_comp_plot)
+
+}
+make_cbt_summary_plot <- function(
+    df,
+    mod_run,
+    title_size,
+    xaxis_size
+) {
+
+  cbt_summary_plot <-
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(
+      data     = dplyr::filter(
+        df,
+        group       == "CBT Summary",
+        Description == "COB Unused CBT Water",
+        model_run   == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, fill = Description),
+      position = "stack",
+      stat     = 'identity',
+      color    = "black",
+      size     = 0.05
+    ) +
+    ggplot2::geom_line(
+      data     = dplyr::filter(
+        df,
+        group       == "Total CBT",
+        model_run   == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, color = name),
+      size = 0.75
+    ) +
+    ggplot2::scale_color_manual(values = "black") +
+    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+    ggplot2::labs(
+      title = paste0(mod_run, ": CBT Water by Year"),
+      y = "Flow (af)",
+      x = "Water year"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+
+  return(cbt_summary_plot)
+
+}
+
+make_reuse_water_exchange_plots <- function(
+    df,
+    plot_title,
+    ylab_title,
+    yaxis_max,
+    title_size,
+    xaxis_size
+) {
+
+  reuse_plot <-
+    df %>%
+    ggplot2::ggplot(
+      ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
+    ) +
+    ggplot2::geom_line() +
+    ggplot2::ylim(0, yaxis_max) +
+    ggplot2::labs(
+      title = plot_title,
+      x     = "Water Year",
+      y     = ylab_title
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(reuse_plot)
+
+}
+
 make_mass_balance_plot <- function(
     df,
     plot_title,
