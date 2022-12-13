@@ -140,3 +140,133 @@ process_cbt_quota <- function(df, quota_df) {
   return(cbt_extract)
 
 }
+
+process_cbt_quota_tbl <- function(
+    df,
+    quota_df
+    ) {
+
+  cbt_qm24 <-
+    outputs %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -model_version, -model_id, -model_num,
+          -extra_info, -year, -qm, -wyqm, -step, -start_date, -end_date),
+        as.numeric)
+    ) %>%
+    dplyr::filter(qm <= 24) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(Decree75_QM1_24 = sum(Decree_75_Flow)) %>%
+    dplyr::mutate(cbt_year_taken = as.numeric(year) - 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2013) %>%
+    dplyr::group_by(cbt_year_taken, model_run) %>%
+    dplyr::select(-year) %>%
+    dplyr::rename(year = cbt_year_taken)  %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::mutate(year = as.character(year)) %>%
+    dplyr::filter(year >= 1915 & year <= 2013) %>%
+    dplyr::ungroup()
+
+  cbt_qm25 <-
+    outputs %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -model_version, -model_id, -model_num,
+          -extra_info, -year, -qm, -wyqm, -step, -start_date, -end_date),
+        as.numeric)
+    ) %>%
+    dplyr::filter(qm >= 25) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(Decree75_QM25_48 = sum(Decree_75_Flow))  %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::mutate(year = as.character(year)) %>%
+    dplyr::filter(year >= 1915 & year <= 2013) %>%
+    dplyr::ungroup()
+
+  # run an annual analysis part 1
+  cbt_extract24 <-
+    outputs %>%
+    dplyr::select(year, qm, model_run, DataObject_3_Flow) %>%
+    dplyr::filter(qm == 24) %>%
+    dplyr::filter(year >= 1915 & year <= 2013) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::rename(qm24 = qm) %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::ungroup()
+
+  # run an annual analysis part 2
+  cbt_extract25 <-
+    outputs %>%
+    dplyr::select(year, qm, model_run, DataObject_39_Flow, DataObject_44_Flow) %>%
+    dplyr::filter(qm == 25) %>%
+    dplyr::filter(year >= 1915 & year <= 2013) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::rename(qm25 = qm) %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::ungroup()
+
+  cbt_quota <-
+    quota_df %>%
+    dplyr::arrange(model_run, year) %>%
+    dplyr::filter(year >= 1915 & year <= 2013) %>%
+    dplyr::mutate(
+      year              = as.character(year),
+      COB_CBT_allotment = quota * 21174
+    )
+
+  cbt_extract_tbl <-
+    cbt_extract24 %>%
+    dplyr::left_join(
+      cbt_extract25,
+      by = c("year", "model_run")
+    ) %>%
+    dplyr::left_join(
+      cbt_qm24,
+      by = c("year", "model_run")
+    ) %>%
+    dplyr::left_join(
+      cbt_qm25,
+      by = c("year", "model_run")
+    ) %>%
+    dplyr::left_join(
+      cbt_quota,
+      by = c("year", "model_run")
+    ) %>%
+    dplyr::relocate(year, qm24, qm25) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -year, -qm24, -qm25),
+        as.numeric)
+    ) %>%
+    dplyr::mutate(uid = 1:n()) %>%
+    dplyr::group_by(uid) %>%
+    # dplyr::group_by(year, model_run)
+    dplyr::mutate(
+      COB_CBT_NormalUse      = sum(Decree75_QM1_24, Decree75_QM25_48),
+      COB_CBT_BorrowedWinter = (DataObject_3_Flow - DataObject_44_Flow),
+      COB_CBT_YeartoYearDebt = (DataObject_44_Flow),
+      COB_CBT_TotalUse       = sum(COB_CBT_NormalUse, COB_CBT_BorrowedWinter, COB_CBT_YeartoYearDebt),
+      COB_CBT_Unused         = round(COB_CBT_allotment - COB_CBT_TotalUse, 0)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-uid) %>%
+    dplyr::select(year, model_run, COB_CBT_TotalUse, COB_CBT_Unused) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::summarise(
+      'CBT Use (mean)'    = round(mean(COB_CBT_TotalUse),0),
+      'CBT Use (min)'     = min(COB_CBT_TotalUse),
+      'CBT Use (max)'     = max(COB_CBT_TotalUse),
+      'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0),
+      'Unused CBT (min)'  = min(COB_CBT_Unused),
+      'Unused CBT (max)'  = max(COB_CBT_Unused),
+      "Unused CBT (min)"  = ifelse(`Unused CBT (min)` < 0, 0, `Unused CBT (min)`)
+      )
+
+
+  return(cbt_extract_tbl)
+
+}
+
+

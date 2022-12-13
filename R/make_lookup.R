@@ -95,3 +95,22 @@ cbt_new_params <- function() {
   return(def_df)
 
 }
+
+cram_type <- function() {
+
+  # make a look up between CRAM element and object 'type'
+  tmp <-
+    data.frame(
+      Name = c("DataObject_30_Flow", "Reservoir_1_Content",
+               "DataObject_28_Flow", "Reservoir_3_Content",
+               "DataObject_29_Flow", "DataObject_1_Flow"),
+      Type = c("Reusable Water", "Total Contents",
+               "Reusable Water", "Total Contents",
+               "Reusable Water", "Total COB Contents"),
+      Group = c("NBC Reservoir", "NBC Reservoir",
+                "Barker Reservoir", "Barker Reservoir",
+                "Boulder Reservoir", "Boulder Reservoir")
+    )
+  return(tmp)
+
+}

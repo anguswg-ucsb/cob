@@ -27,7 +27,9 @@ source("R/process_drought_index.R")
 source("R/process_annual_summary.R")
 source("R/process_mass_balance.R")
 source("R/process_reuse_water_exchange.R")
+source("R/process_cbt_quota.R")
 source("R/parse_directory.R")
+# process_cbt_quota
 source("R/utils.R")
 
 base_folder <- "D:/cob/latest/latest"
@@ -697,10 +699,13 @@ comp_mods <-
   # unique quota runs
   cbt_quota_runs <- unique(cbt_quota$model_run)
 
-  # loop through each site and plot
+  message(paste0("Plotting: CBT Quota Components"))
+
+  # plot 2A, loop through each site and plot
   cbt_quota_component_lst <- lapply(1:length(cbt_quota_runs), function(i) {
 
-    message(paste0("Plotting: ", cbt_quota_runs[i]))
+    # message(paste0("Plotting: ", cbt_quota_runs[i]))
+
     cbt_component_plot <-
       make_cbt_component_plot(
                 df         = cbt_quota,
@@ -714,10 +719,12 @@ comp_mods <-
   }) %>%
     stats::setNames(c(cbt_quota_runs))
 
-  # loop through each site and plot
+  message(paste0("Plotting: CBT Quota Summary"))
+
+  # plot 2AB, loop through each site and plot
   cbt_quota_summary_lst <- lapply(1:length(cbt_quota_runs), function(i) {
 
-    message(paste0("Plotting: ", cbt_quota_runs[i]))
+    # message(paste0("Plotting: ", cbt_quota_runs[i]))
 
     cbt_summary_plot <-
       make_cbt_summary_plot(
@@ -760,13 +767,120 @@ comp_mods <-
       bottom = ""
     )
   )
+  # *******************
+  # ---- Table 2AC ----
+  # *******************
+
+  message(paste0("Table: CBT Annual Water Use"))
+
+  # CBT, Windy Gap, Reusable Water Exchange Analysis
+  cbt_quota_tbl  <-
+    outputs %>%
+    process_cbt_quota_tbl(quota_df = quota) %>%
+    make_cbt_quota_tbl(size = 1) %>%
+    gridExtra::grid.arrange(
+      nrow          = 1,
+      top           = "2ac. COB C-BT Annual Water Use 1x1",
+      right         = "",
+      bottom        = "",
+      layout_matrix = rbind(c(1, 1), c(3, 3))
+    )
+
+  # Save table 2AC
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use 1x1.png"),
+    width    = 14,
+    height   = 8,
+    plot     = cbt_quota_tbl
+  )
   # *****************
-  # ---- Plot 2C ----
+  # ---- Plot 2E ----
   # *****************
 
-  # *********************
+  # Reservoir Reusable Storage Annual (only for comparison model)
+  res_reuse_storage <-
+    outputs %>%
+    process_res_reuse_storage(definition_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
+    ) %>%
+    dplyr::filter(model_run == scenario_name[2])
+
+  # Reservoir Reusable Storage Annual Groups to plot
+  res_reuse_storage_sites <- unique(res_reuse_storage$Group)
+  comp_mod_id             <- comp_out$model_id
+
+  # plot 2AB, loop through each site and plot
+  res_reuse_stor_lst <- lapply(1:length(res_reuse_storage_sites), function(i) {
+
+    message(paste0("Plotting: Reservoir Reusable water - ", res_reuse_storage_sites[i]))
+
+    # extract dataframe
+    extract_df <-
+      res_reuse_storage %>%
+      dplyr::filter(Group == res_reuse_storage_sites[i]) %>%
+      dplyr::mutate(
+        year = as.numeric(year)
+
+        )
+
+    # refactor levels
+    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
+
+    extract_df <-
+      extract_df %>%
+      dplyr::mutate(
+        Type = factor(Type, levels = lvls)
+      )
+
+    # Horizontal line y intercept point
+    storage_max <- unique(extract_df$storage_max)
+
+    res_reuse_plot <-
+      make_res_reusable_water_plot(
+        df               = extract_df,
+        plot_title       = res_reuse_storage_sites[i],
+        hline_yint       = storage_max,
+        compare_model_id = comp_mod_id,
+        title_size       = title_size,
+        xaxis_size       = xaxis_size
+      )
+    res_reuse_plot
+
+  }) %>%
+    stats::setNames(c(res_reuse_storage_sites))
+
+  # save plot 2E
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2e. Reusable Water in Reservoir - Average Annual Time Series Plot 2x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      res_reuse_stor_lst[["NBC Reservoir"]],
+      res_reuse_stor_lst[["Barker Reservoir"]],
+      res_reuse_stor_lst[["Boulder Reservoir"]],
+      nrow   = 2,
+      top    = "2e. Reusable Water in Reservoir - Average Annual Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # *****************
+  # ---- Plot 2F ----
+  # *****************
+
+  # *****************
+  # ---- Plot 2G ----
+  # *****************
+
+  # *****************
+  # ---- Plot 2H ----
+  # *****************
+
+  # ***************
   # ---- Plot  ----
-  # *********************
+  # ***************
   drought_plot_name = "Drought Response Level"
 
 

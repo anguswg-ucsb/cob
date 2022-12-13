@@ -1,3 +1,88 @@
+make_res_reusable_water_plot <- function(
+    df,
+    hline_yint,
+    plot_title,
+    compare_model_id,
+    title_size,
+    xaxis_size
+) {
+
+  res_reuse_plot <-
+    df %>%
+    ggplot2::ggplot(ggplot2::aes(x = year, y = value, color = Type, linetype = Type)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_hline(yintercept = hline_yint, color = "red") +
+    ggplot2::ylim(0, 12500) +
+    ggplot2::labs(
+      title =  paste0(plot_title, ": Reuseable Water (", compare_model_id, ")"),
+      x     = "Water Year",
+      y     = "Contents (af)"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    ) +
+    ggplot2::scale_color_manual(values = c("black", "blue")) +
+    ggplot2::scale_linetype_manual(values = c("solid", "dashed"))
+
+  return(res_reuse_plot)
+
+}
+
+make_cbt_quota_tbl <- function(
+    df,
+    size = 1
+    ) {
+
+  # set the theme, sizes
+  tt <-
+    gridExtra::ttheme_default(
+      core    = list(fg_params=list(cex = size)),
+      colhead = list(fg_params=list(cex = size)),
+      rowhead = list(fg_params=list(cex = size))
+      )
+
+
+  # Table 1 CBT Quota
+  tbl_temp_a <-
+    gridExtra::tableGrob(
+                        d     = df,
+                        theme = tt,
+                        rows  = NULL
+                        ) %>%
+      gtable::gtable_add_grob(
+        grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+        t     = 1,
+        l     = 1,
+        r     = ncol(df)
+        ) %>%
+      gtable::gtable_add_grob(
+        grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+        t     = 1,
+        b     = nrow(df),
+        l     = 1,
+        r     = 1
+        ) %>%
+      gtable::gtable_add_grob(
+        grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+        t     = 1,
+        b     = nrow(df),
+        l     = 2,
+        r     = 4
+      ) %>%
+      gtable::gtable_add_grob(
+        grobs = grid::rectGrob(gp = gpar(fill = NA, lwd = 2)),
+        t     = 1,
+        b     = nrow(df),
+        l     = 5,
+        r     = ncol(df)
+        )
+
+  return(tbl_temp_a)
+
+}
+
 make_cbt_component_plot <- function(
     df,
     mod_run,
