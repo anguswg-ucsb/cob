@@ -1,17 +1,21 @@
 make_res_reusable_water_plot <- function(
     df,
-    hline_yint,
+    timescale = "annual",
+    storage_max,
     plot_title,
     compare_model_id,
     title_size,
     xaxis_size
 ) {
 
+  if(timescale == "annual") {
+
+
   res_reuse_plot <-
     df %>%
     ggplot2::ggplot(ggplot2::aes(x = year, y = value, color = Type, linetype = Type)) +
     ggplot2::geom_line() +
-    ggplot2::geom_hline(yintercept = hline_yint, color = "red") +
+    ggplot2::geom_hline(yintercept = storage_max, color = "red") +
     ggplot2::ylim(0, 12500) +
     ggplot2::labs(
       title =  paste0(plot_title, ": Reuseable Water (", compare_model_id, ")"),
@@ -28,7 +32,61 @@ make_res_reusable_water_plot <- function(
 
   return(res_reuse_plot)
 
+  }
+
+  if(timescale == "qm") {
+
+    res_reuse_plot <-
+      df %>%
+      ggplot2::ggplot(ggplot2::aes(x = qm, y = value, color = Type, linetype = Type)) +
+      ggplot2::geom_line() +
+      ggplot2::ylim(0, 12500) +
+      ggplot2::labs(
+        title =  paste0(plot_title, ": Reuseable Water (", compare_model_id, ")"),
+        x     = "Quarter-Month",
+        y     = "Contents (af)"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      ) +
+      ggplot2::scale_color_manual(values = c("black", "blue")) +
+      ggplot2::scale_linetype_manual(values = c("solid", "dashed"))
+
+    return(res_reuse_plot)
+
+  }
+
+  if(timescale == "date") {
+
+    res_reuse_plot <-
+      df %>%
+      ggplot2::ggplot(ggplot2::aes(x = wyqm, y = value, color = Type, linetype = Type)) +
+      ggplot2::geom_line() +
+      ggplot2::ylim(0, storage_max) +
+      ggplot2::labs(
+        title =  paste0(plot_title, ": Reuseable Water (", compare_model_id, ")"),
+        x     = "Water Year",
+        y     = "Contents (af)"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      ) +
+      ggplot2::scale_color_manual(values = c("Total Contents" = "black", "Reusable Water" = "blue")) +
+      ggplot2::scale_linetype_manual(values = c("Total Contents" = "solid", "Reusable Water" = "dashed"))
+      # ggplot2::scale_color_manual(values = c("black", "blue")) +
+      # ggplot2::scale_linetype_manual(values = c("solid", "dashed"))
+
+    return(res_reuse_plot)
+
+  }
+
 }
+
+
 
 make_cbt_quota_tbl <- function(
     df,

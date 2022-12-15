@@ -70,7 +70,7 @@ comp_mods <-
     # model_num %in% c("7525"),
     # grepl("8500NoBorrow4.5mgd_ID1", file),
     # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
-    grepl("DRRP_DroughtPlan_2020_055e_8500NoBorrow17mgd_ID1", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1_7525", file),
     # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID5_7525", file),
     output == "OutputSheet"
   ) %>%
@@ -90,7 +90,7 @@ comp_mods <-
   dplyr::select(prefix, model_version, model_id, model_num)
 
 base_extra_txt <- "CC"
-comp_extra_txt <- "8500NoBorrow17mgd"
+comp_extra_txt <- "10000NoBorrow17mgd"
 # comp_extra_txt <- "10000NoBorrow4.5mgd"
 
 # comp_mod_size = "8500"
@@ -2392,9 +2392,11 @@ for(z in 1:nrow(base_mods)) {
         extract_list[[i]] <- data_list[[i]] %>%
           group_by(ModelRun) %>%
           select(!!!syms(site_selection)) %>%
-          rowwise() %>% mutate(TotalReuse = sum(DataObject_30_Flow, DataObject_28_Flow, DataObject_29_Flow,
+          rowwise() %>%
+          mutate(TotalReuse = sum(DataObject_30_Flow, DataObject_28_Flow, DataObject_29_Flow,
                                                 Reservoir_13_Content, Reservoir_25_Content)) %>%
-          rowwise() %>% mutate(TotalContents = sum(Reservoir_1_Content, Reservoir_3_Content, DataObject_1_Flow,
+          rowwise() %>%
+          mutate(TotalContents = sum(Reservoir_1_Content, Reservoir_3_Content, DataObject_1_Flow,
                                                    Reservoir_13_Content, Reservoir_25_Content))
         # rowwise() %>% mutate(WittTotalInflow = sum(WittemyerRecaptureWWTPReuse, WittemyerRecaptureGREP,
         #                                            WittemyerFirstFillRight))

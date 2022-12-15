@@ -28,7 +28,9 @@ source("R/process_annual_summary.R")
 source("R/process_mass_balance.R")
 source("R/process_reuse_water_exchange.R")
 source("R/process_cbt_quota.R")
+source("R/process_res_reuse_storage.R")
 source("R/parse_directory.R")
+
 # process_cbt_quota
 source("R/utils.R")
 
@@ -839,8 +841,9 @@ comp_mods <-
     res_reuse_plot <-
       make_res_reusable_water_plot(
         df               = extract_df,
+        timescale        = "annual",
+        storage_max      = storage_max,
         plot_title       = res_reuse_storage_sites[i],
-        hline_yint       = storage_max,
         compare_model_id = comp_mod_id,
         title_size       = title_size,
         xaxis_size       = xaxis_size
@@ -870,12 +873,165 @@ comp_mods <-
   # ---- Plot 2F ----
   # *****************
 
-  # *****************
-  # ---- Plot 2G ----
-  # *****************
+  # Reservoir Reusable Storage Annual (only for comparison model)
+  res_reuse_storage_qm <-
+    outputs %>%
+    process_res_reuse_storage_qm(definition_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
+    ) %>%
+    dplyr::filter(model_run == scenario_name[2])
+
+  # Reservoir Reusable Storage Annual Groups to plot
+  res_reuse_storage_qm_sites <- unique(res_reuse_storage_qm$Group)
+
+  # plot 2AB, loop through each site and plot
+  res_reuse_stor_qm_lst <- lapply(1:length(res_reuse_storage_qm_sites), function(i) {
+
+    message(paste0("Plotting: Reservoir Reusable water - ", res_reuse_storage_qm_sites[i]))
+
+    # extract dataframe
+    extract_df <-
+      res_reuse_storage_qm %>%
+      dplyr::filter(Group == res_reuse_storage_qm_sites[i]) %>%
+      dplyr::mutate(
+        qm = as.numeric(qm)
+      )
+
+    # refactor levels
+    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
+
+    extract_df <-
+      extract_df %>%
+      dplyr::mutate(
+        Type = factor(Type, levels = lvls)
+      )
+
+    # Horizontal line y intercept point
+    storage_max <- unique(extract_df$storage_max)
+
+    res_reuse_qm_plot <-
+      make_res_reusable_water_plot(
+        df               = extract_df,
+        timescale        = "qm",
+        storage_max      = storage_max,
+        plot_title       = res_reuse_storage_sites[i],
+        compare_model_id = comp_mod_id,
+        title_size       = title_size,
+        xaxis_size       = xaxis_size
+      )
+    res_reuse_qm_plot
+
+  }) %>%
+    stats::setNames(c(res_reuse_storage_qm_sites))
+
+  # save plot 2E
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2f. Reusable Water in Reservoir - Average Quarter-Monthly Plot 2x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      res_reuse_stor_qm_lst[["NBC Reservoir"]],
+      res_reuse_stor_qm_lst[["Barker Reservoir"]],
+      res_reuse_stor_qm_lst[["Boulder Reservoir"]],
+      nrow   = 2,
+      top    = "2f. Reusable Water in Reservoir - Average Quarter-Monthly Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+
+  # **********************
+  # ---- Plot 2H + 2I ----
+  # **********************
+
+  reuse_res_content <-
+    outputs %>%
+    process_reusable_res_content(definition_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(rev(scenario_name)))
+    )  %>%
+    dplyr::filter(model_run == scenario_name[2])
+
+  # unique sites
+  reuse_res_cont_sites <- unique(reuse_res_content$Group)
+# i = 6
+  # plot 2H and 2I, loop through each site and plot
+  reuse_res_cont_lst <- lapply(1:length(reuse_res_cont_sites), function(i) {
+
+    message(paste0("Plotting: Reservoir Reusable water - ", reuse_res_cont_sites[i]))
+
+    # extract dataframe
+    extract_df <-
+      reuse_res_content %>%
+      dplyr::filter(Group == reuse_res_cont_sites[i]) %>%
+      dplyr::mutate(
+        wyqm = as.Date(paste0(wyqm, "-01")),
+        qm = as.numeric(qm)
+      )
+
+    # refactor levels
+    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
+
+    extract_df <-
+      extract_df %>%
+      dplyr::mutate(
+        Type = factor(Type, levels = lvls)
+      )
+
+    # Horizontal line y intercept point
+    storage_max <- unique(extract_df$storage_max)
+
+    res_reuse_cont_plot <-
+      make_res_reusable_water_plot(
+        df               = extract_df,
+        timescale        = "date",
+        storage_max      = storage_max,
+        plot_title       = reuse_res_cont_sites[i],
+        compare_model_id = comp_mod_id,
+        title_size       = title_size,
+        xaxis_size       = xaxis_size
+      )
+    res_reuse_cont_plot
+
+  }) %>%
+    stats::setNames(c(reuse_res_cont_sites))
+
+  # save plot 2F 2I
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2h. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot 2x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      reuse_res_cont_lst[["NBC Reservoir"]],
+      reuse_res_cont_lst[["Barker Reservoir"]],
+      reuse_res_cont_lst[["Boulder Reservoir"]],
+      reuse_res_cont_lst[["Wittemyer"]],
+      reuse_res_cont_lst[["Panama"]],
+      nrow   = 5,
+      top    = "2h. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
+
+  # save plot 2F 2I
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2i. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot 1x1.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      reuse_res_cont_lst[["All 5 Reservoirs"]],
+      nrow   = 1,
+      top    = "2i. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot",
+      right  = "",
+      bottom = ""
+    )
+  )
 
   # *****************
-  # ---- Plot 2H ----
+  # ---- Plot 2I ----
   # *****************
 
   # ***************
