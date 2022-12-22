@@ -86,7 +86,20 @@ make_res_reusable_water_plot <- function(
 
 }
 
+make_cbt_quota_tbl2 <- function(
+    df
+) {
 
+  summary_tbl <-
+    df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title    = gt::md("City of Boulder Annual C-BT Water Use"),
+      subtitle = gt::md(paste0(unique(df$model_run)[2], " vs. ",   unique(df$model_run)[1]))
+    )
+
+  return(summary_tbl)
+}
 
 make_cbt_quota_tbl <- function(
     df,
@@ -140,7 +153,107 @@ make_cbt_quota_tbl <- function(
   return(tbl_temp_a)
 
 }
+make_cbt_unused_plot <- function(
+    df,
+    mod_run,
+    title_size,
+    xaxis_size
+) {
 
+  cbt_comp_plot <-
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(
+      data     = dplyr::filter(
+        df,
+        group == "CBT Summary",
+        Description == "COB Unused CBT Water",
+        model_run == mod_run
+      ),
+      # data = df,
+      ggplot2::aes(x = year, y = value, fill = Description),
+      position = "stack",
+      stat     = 'identity',
+      color    = "black",
+      size     = 0.05
+    ) +
+    # ggplot2::scale_fill_manual(values = "cornflowerblue") +
+    ggplot2::geom_line(
+      data     = dplyr::filter(
+        df,
+        group     == "Total CBT",
+        model_run == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, color = name),
+      size = 0.75
+    ) +
+    ggplot2::ylim(-10000, 22000) +
+    ggplot2::scale_color_manual(values = "black") +
+    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+    ggplot2::labs(
+      title = paste0(mod_run, ": CBT Water by Year"),
+      y = "Flow (af)",
+      x = "Water year"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(cbt_comp_plot)
+
+}
+
+make_cbt_used_plot <- function(
+    df,
+    mod_run,
+    title_size,
+    xaxis_size
+) {
+
+  cbt_comp_plot <-
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(
+      data     = dplyr::filter(
+        df,
+        group == "CBT Summary",
+        Description == "COB Used CBT Water",
+        model_run == mod_run
+      ),
+      # data = df,
+      ggplot2::aes(x = year, y = value, fill = Description),
+      position = "stack",
+      stat     = 'identity',
+      color    = "black",
+      size     = 0.05
+    ) +
+    ggplot2::scale_fill_manual(values = "cornflowerblue") +
+    ggplot2::geom_line(
+      data     = dplyr::filter(
+        df,
+        group     == "Total CBT",
+        model_run == mod_run
+      ),
+      ggplot2::aes(x = year, y = value, color = name),
+      size = 0.75
+    ) +
+    ggplot2::ylim(NA, 22000) +
+    ggplot2::scale_color_manual(values = "black") +
+    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+    ggplot2::labs(
+      title = paste0(mod_run, ": CBT Water by Year"),
+      y = "Flow (af)",
+      x = "Water year"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(cbt_comp_plot)
+
+}
 make_cbt_component_plot <- function(
     df,
     mod_run,

@@ -27,13 +27,19 @@ source("R/utils.R")
 # https://docs.google.com/spreadsheets/d/16yL1AW80Uqo0tNd9LOYPi2vCGPcJ4AfsYhakgoO4bGg/edit?hl=en&forcehl=1#gid=0
 # Data: \10114 City of Boulder\2022 Modeling\Model Runs\Reusable Supply Model Runs\v055ac
 
+# ********************
+# ---- Setup data ----
+# ********************
+
+# folder w/ model runs
 base_folder <- "D:/cob/latest/latest"
 # base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 # base_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
-# 0101.DRRP_DroughtPlan_2020_055d_CC_ID1_7525.OutputSheet
-# tmp2 <-
+
+# get details for base model
 base_mods <-
   model_dirs %>%
   dplyr::filter(
@@ -46,10 +52,6 @@ base_mods <-
   dplyr::group_by(model_version, model_id, model_num) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
-  # dplyr::filter(
-  #   name != "Quota",
-  #   model_num == "7525"
-  #   ) %>%
   dplyr::mutate(
     # model_id = paste0(model_id, "_", "ID1")
     model_id = paste0("ID1")
@@ -60,41 +62,52 @@ base_mods <-
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
+# get details for comparison model
 comp_mods <-
   model_dirs %>%
   dplyr::filter(
-    # !model_id %in% c("ID1")
-    # model_id %in% c("ID2", "ID3", "ID5"),
-    # model_id %in% c("ID2", "ID5"),
-    # model_version %in% c("055a")
-    # model_num %in% c("7525"),
-    # grepl("8500NoBorrow4.5mgd_ID1", file),
     # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
-    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1_7525", file),
-    # grepl("0101.DRRP_DroughtPlan_2020_055ac_CC_ID5_7525", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1", file),
     output == "OutputSheet"
   ) %>%
   # dplyr::group_by(extra_info) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
-  # dplyr::filter(name != "Quota", model_num == "7525") %>%
-  # dplyr::mutate(
-  #   model_id = paste0(model_id, "_", "ID1")
-  #   # model_id = paste0("ID1")
-  # ) %>%
   dplyr::mutate(
     prefix = substr(file, 1, 4)
-     # prefix = substr(file, 28, 31)
   ) %>%
   dplyr::select(prefix, model_version, model_id, model_num)
 
-base_extra_txt <- "CC"
-comp_extra_txt <- "10000NoBorrow17mgd"
-# comp_extra_txt <- "10000NoBorrow4.5mgd"
+# base model extra txt column
+base_extra_txt <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl("0101.DRRP_DroughtPlan_2020_055e_CC_ID1", file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  .$extra_info
+base_extra_txt
+# base_extra_txt <- "CC"
 
-# comp_mod_size = "8500"
-# base_mod_size = "3143"
+# Comp model extra txt column
+comp_extra_txt <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1", file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  .$extra_info
+
+comp_extra_txt
+# comp_extra_txt <- "8500NoBorrow4.5mgd"
+
 # z = 1
 # k = 1
 # base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
@@ -103,6 +116,7 @@ currwd               <- "D:/cob/latest/latest"
 # currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
 # currwd <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
 # model_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+
 # isf_path <- "D:/cob/latest/latest"
 model_folder <- "D:/cob/latest/latest"
 # model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
@@ -1396,45 +1410,48 @@ for(z in 1:nrow(base_mods)) {
 
 
       # CBT Quota Tabulation ----------------------------------------------------
+      # CBT Quota Tabulation - New Advanced Quota (2a, 2ab, 2ac) -------------------------------
 
-      # select the sites you want to plot
-      site_selection <- c("year", "qm", "Month", "Date", "ModelRun", "Decree_75_Content", "Decree_75_Flow",
-                          "DataObject_39_Flow", "DataObject_3_Flow", "DataObject_44_Flow")
-      n_site_selection <- length(site_selection)
-      site_start_no <- 6
-      site_selection_short <- site_selection[site_start_no:n_site_selection]
-      n_site_selection_short <- length(site_selection_short)
+      # DO14 = cbt quota (set in qm 25)
+
+      # cbt quota is now set once in November (qm 5) with an initial quota
+      # then the final quota is set in April 1 (qm 25)
+      # the quota had 3 parts now: qms 5-24, qms 25-48, and qms 1-4 of the next year
+      # the quota then resets on qm 5 for the new year
 
 
-      # Get the half of the annual CBT water (Decree 75)
+
+      # Get the half of the annual CBT water (Decree 75) (QM 5-24)
       ### cbt use extract decree 75 for QM's 1-24, which are off by 1 year from CBT accounting (decree 75 resets to 0 at QM25)
-      cbt_dec_75_QM1_24_list <- list()
+      cbt_dec_75_QM5_24_list <- list()
       for (i in 1:n_file_prefix){
 
-        cbt_dec_75_QM1_24_list[[i]] <- data_list[[i]] %>%
+        cbt_dec_75_QM5_24_list[[i]] <- data_list[[i]] %>%
           # select the columns of interest
           select(year, qm, ModelRun, Decree_75_Flow) %>%
           # get the Boulder CBT capacity QMs 1-24, Oct-Mar, before the decree is reset on April 1 (qm 25)
           # (the CBT decree capacity resets to 0 in model on QM 25)
-          filter(qm <= 24) %>%
+          filter(qm >= 5 & qm <= 24) %>%
           # group by year and then sum the flow by year, so sum QMs 1-24
           group_by(year, ModelRun) %>%
-          summarise(Decree75_QM1_24 = sum(Decree_75_Flow)) %>%
-          # make a new column that offsets the year by 1 to reflect when that water was actually used
-          # to align with the CBT quota which resets this Decree 75 on QM 25
-          mutate(cbt_year_taken = year - 1)
+          summarise(Decree75_QM5_24 = sum(Decree_75_Flow))
+        #%>%
+        # make a new column that offsets the year by 1 to reflect when that water was actually used
+        # to align with the CBT quota which resets this Decree 75 on QM 25
+        #mutate(cbt_year_taken = year - 1)
 
       }
-      cbt_dec_75_QM1_24 <- bind_rows(cbt_dec_75_QM1_24_list[[1]], cbt_dec_75_QM1_24_list[[2]]) %>%
+      cbt_dec_75_QM5_24 <- bind_rows(cbt_dec_75_QM5_24_list[[1]], cbt_dec_75_QM5_24_list[[2]]) %>%
         # order output by modelID then year (to help with column binds later)
         ungroup() %>%
         arrange(ModelRun, year) %>%
-        filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2013) %>%
-        group_by(cbt_year_taken, ModelRun) %>%
-        select(-year) %>%
-        rename(year = cbt_year_taken)
+        #filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2014) %>%
+        # group_by(cbt_year_taken, ModelRun) %>%
+        group_by(year, ModelRun)
+      #select(-year) %>%
+      #rename(year = cbt_year_taken)
 
-      # Get the half of the annual CBT water (Decree 75)
+      # Get the other half of the annual CBT water (Decree 75)
       ### cbt use extract decree 75 for QM's 15-48 (these are NOT off by 1 year)
       cbt_dec_75_QM25_48_list <- list()
       for (i in 1:n_file_prefix){
@@ -1453,103 +1470,94 @@ for(z in 1:nrow(base_mods)) {
       }
       cbt_dec_75_QM25_48 <- bind_rows(cbt_dec_75_QM25_48_list[[1]], cbt_dec_75_QM25_48_list[[2]]) %>%
         # order output by modelID then year (to help with column binds later)
+        arrange(ModelRun, year)
+      #filter(year >= 1915 & year <= 2013)
+
+
+      # Get the half of the annual CBT water (Decree 75) (QM 5-24)
+      ### cbt use extract decree 75 for QM's 1-24, which are off by 1 year from CBT accounting (decree 75 resets to 0 at QM25)
+      cbt_dec_75_QM1_4_list <- list()
+      for (i in 1:n_file_prefix){
+
+        cbt_dec_75_QM1_4_list[[i]] <- data_list[[i]] %>%
+          # select the columns of interest
+          select(year, qm, ModelRun, Decree_75_Flow) %>%
+          # get the Boulder CBT capacity QMs 1-24, Oct-Mar, before the decree is reset on April 1 (qm 25)
+          # (the CBT decree capacity resets to 0 in model on QM 25)
+          filter(qm >= 1 & qm <= 4) %>%
+          # group by year and then sum the flow by year, so sum QMs 1-24
+          group_by(year, ModelRun) %>%
+          summarise(Decree75_QM1_4 = sum(Decree_75_Flow)) %>%
+          # make a new column that offsets the year by 1 to reflect when that water was actually used
+          # to align with the CBT quota which resets this Decree 75 on QM 25
+          mutate(cbt_year_taken = year - 1) %>%
+          ungroup()
+
+      }
+      # add 1 row for 'missing/future' data that is not in the model (outside the period of record) for 2014/2015
+      cbt_dec_75_QM1_4_list[[1]] <- add_row(cbt_dec_75_QM1_4_list[[1]],
+                                            year=2015, ModelRun=scenario_name[1], Decree75_QM1_4=0, cbt_year_taken=2014)
+      cbt_dec_75_QM1_4_list[[2]] <- add_row(cbt_dec_75_QM1_4_list[[2]],
+                                            year=2015, ModelRun=scenario_name[2], Decree75_QM1_4=0, cbt_year_taken=2014)
+
+
+      cbt_dec_75_QM1_4 <- bind_rows(cbt_dec_75_QM1_4_list[[1]], cbt_dec_75_QM1_4_list[[2]]) %>%
+        # order output by modelID then year (to help with column binds later)
+        ungroup() %>%
         arrange(ModelRun, year) %>%
-        filter(year >= 1915 & year <= 2013)
+        filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2014) %>%
+        group_by(cbt_year_taken, ModelRun) %>%
+        #group_by(year, ModelRun)
+        select(-year) %>%
+        rename(year = cbt_year_taken) %>%
+        relocate(year, .before = ModelRun)
 
-
-
-      ### run an annual analysis
-      extract_list1 <- list()
-      for (i in 1:n_file_prefix){
-
-        extract_list1[[i]] <- data_list[[i]] %>%
-          # select the columns of interest from the vector above using !!!syms to read it properly
-          select(year, qm, ModelRun, DataObject_3_Flow) %>%
-          # grab data from QM 24, which is when the max value is set, before it's cleared on QM 25.
-          filter(qm == 24) %>%
-          # remove last year to align with Decree 75 qm 24
-          filter(year >= 1915 & year <= 2013)
-        #group_by(year, ModelRun) %>%
-        # faster way to do this (but it doesn't adjust column names)
-        # get the annual cbt decree sum
-        #summarise(across(site_selection[site_start_no]:site_selection[n_site_selection], sum))
-
-      }
-
-      # merge the data from the loops together
-      annual_extract1 <- bind_rows(extract_list1[[1]], extract_list1[[2]]) %>%
-        group_by(ModelRun) %>%
-        rename(qm24 = qm) %>%
-        # order the data so it lines up with the other dataset
-        arrange(., ModelRun, year)
-
-
-      ### run an annual analysis part 2
-      extract_list2 <- list()
-      for (i in 1:n_file_prefix){
-
-        extract_list2[[i]] <- data_list[[i]] %>%
-          # select the columns of interest from the vector above using !!!syms to read it properly
-          select(year, qm, ModelRun, DataObject_39_Flow, DataObject_44_Flow) %>%
-          # grab data from QM 25, when these values are set.
-          filter(qm == 25) %>%
-          # remove last year to align with Decree 75 qm 24
-          filter(year >= 1915 & year <= 2013)
-        #group_by(year, ModelRun) %>%
-        # faster way to do this (but it doesn't adjust column names)
-        # get the annual cbt decree sum
-        #summarise(across(site_selection[site_start_no]:site_selection[n_site_selection], sum))
-
-      }
-
-      # merge the data from the loops together
-      annual_extract2 <- bind_rows(extract_list2[[1]], extract_list2[[2]]) %>%
-        group_by(ModelRun) %>%
-        rename(qm25 = qm) %>%
-        # order the data so it lines up with the other dataset
-        arrange(., ModelRun, year)
 
       # get the actual CBT quota
-      Quota_annual2 <- Quota_annual %>%
-        arrange(., ModelRun, Year) %>%
-        # remove last year to align with Decree 75 qm 24
-        filter(Year >= 1915 & Year <= 2013) %>%
-        mutate(ModelRun2 = c(rep(scenario_name[1], 99), rep(scenario_name[2], 99))) %>%
-        arrange(., ModelRun2, Year) %>%
-        mutate(COB_CBT_allotment = Quota * 21174)
+      Quota_annual_list <- list()
+      for (i in 1:n_file_prefix){
+        Quota_annual_list[[i]] <- data_list[[i]] %>%
+          select(year, qm, ModelRun, DataObject_14_Flow) %>%
+          filter(qm == 25) %>%
+          # remove last year to align with Decree 75 qm 24
+          #filter(Year >= 1915 & Year <= 2013) %>%
+          #mutate(ModelRun2 = c(rep(scenario_name[1], 100), rep(scenario_name[2], 100))) %>%
+          #arrange(., ModelRun2, Year) %>%
+          mutate(COB_CBT_allotment = (DataObject_14_Flow/100) * 21174)
 
-      # merge the two datasets together
-      annual_extract <- bind_cols(annual_extract1, annual_extract2) %>%
-        bind_cols(., Quota_annual2) %>%
-        bind_cols(., cbt_dec_75_QM1_24) %>%
-        bind_cols(., cbt_dec_75_QM25_48) %>%
-        select(year...1, ModelRun...3, DataObject_3_Flow, DataObject_44_Flow,
-               Decree75_QM1_24, Decree75_QM25_48, COB_CBT_allotment) %>%
-        rename(year = year...1, ModelRun = ModelRun...3) %>%
-        rowwise() %>% mutate(COB_CBT_NormalUse = sum(Decree75_QM1_24, Decree75_QM25_48)) %>%
-        rowwise() %>% mutate(COB_CBT_BorrowedWinter = (DataObject_3_Flow - DataObject_44_Flow)) %>%
-        rowwise() %>% mutate(COB_CBT_YeartoYearDebt = (DataObject_44_Flow)) %>%
-        rowwise() %>% mutate(COB_CBT_TotalUse = sum(COB_CBT_NormalUse, COB_CBT_BorrowedWinter, COB_CBT_YeartoYearDebt)) %>%
-        rowwise() %>% mutate(COB_CBT_Unused = round(COB_CBT_allotment - COB_CBT_TotalUse, 0))
+      }
+      Quota_annual <- bind_rows(Quota_annual_list[[1]], Quota_annual_list[[2]]) %>%
+        # order output by modelID then year (to help with column binds later)
+        arrange(ModelRun, year) %>%
+        select(-qm)
 
 
-      cbt_group_description <- data.frame(Name = c("DataObject_3_Flow", "Decree75_QM1_24", "Decree75_QM25_48", "DataObject_44_Flow",
-                                                   "COB_CBT_allotment", "COB_CBT_TotalUse", "COB_CBT_Unused",
-                                                   "COB_CBT_NormalUse", "COB_CBT_BorrowedWinter", "COB_CBT_YeartoYearDebt"),
-                                          Group = c("CBT Model Component", "CBT Model Component", "CBT Model Component", "CBT Model Component",
-                                                    "Total CBT", "CBT Summary", "CBT Summary",
-                                                    "CBT Component", "CBT Component", "CBT Component"))
+      final_data <- left_join(cbt_dec_75_QM5_24, cbt_dec_75_QM25_48, by=c("year"="year", "ModelRun"="ModelRun"))
+      final_data <- left_join(final_data, cbt_dec_75_QM1_4, by=c("year"="year", "ModelRun"="ModelRun"))
+      final_data <- left_join(final_data, Quota_annual, by=c("year"="year", "ModelRun"="ModelRun"))
+      final_data <- final_data %>%
+        mutate(COB_CBT_Used = sum(Decree75_QM5_24, Decree75_QM25_48, Decree75_QM1_4)) %>%
+        mutate(COB_CBT_Unused = COB_CBT_allotment - COB_CBT_Used) %>%
+        select(-DataObject_14_Flow)
+      final_data
+
+
+
+      # make the descritpions for new variables
+      cbt_group_description <- data.frame(Name = c("Decree75_QM5_24", "Decree75_QM25_48", "Decree75_QM1_4",
+                                                   "COB_CBT_allotment", "COB_CBT_Used", "COB_CBT_Unused"),
+                                          Group = c("CBT Model Component", "CBT Model Component", "CBT Model Component",
+                                                    "Total CBT", "CBT Summary", "CBT Summary"))
 
       # add the new variables to 'definitions'
-      temp_new_data <- matrix(NA, ncol = 4, nrow = 8)
-      temp_new_data[1, 1:4] <- c("Decree75_QM1_24", "COB CBT use QM1-24", "Flow", "Flow (af)")
+      temp_new_data <- matrix(NA, ncol = 4, nrow = 6)
+      temp_new_data[1, 1:4] <- c("Decree75_QM5_24", "COB CBT use QM5-24", "Flow", "Flow (af)")
       temp_new_data[2, 1:4] <- c("Decree75_QM25_48", "COB CBT use QM25-48", "Flow", "Flow (af)")
-      temp_new_data[3, 1:4] <- c("COB_CBT_allotment", "Annual CBT Allotment (af)", "Flow", "Flow (af)")
-      temp_new_data[4, 1:4] <- c("COB_CBT_TotalUse", "COB Total CBT Water Used", "Flow", "Flow (af)")
-      temp_new_data[5, 1:4] <- c("COB_CBT_Unused", "COB Unused CBT Water", "Flow", "Flow (af)")
-      temp_new_data[6, 1:4] <- c("COB_CBT_NormalUse", "COB normal use of CBT water", "Flow", "Flow (af)")
-      temp_new_data[7, 1:4] <- c("COB_CBT_BorrowedWinter", "COB borrowed CBT winter water", "Flow", "Flow (af)")
-      temp_new_data[8, 1:4] <- c("COB_CBT_YeartoYearDebt", "COB CBT debt water", "Flow", "Flow (af)")
+      temp_new_data[3, 1:4] <- c("Decree75_QM1_4", "COB CBT use QM1-4", "Flow", "Flow (af)")
+      temp_new_data[4, 1:4] <- c("COB_CBT_allotment", "Annual CBT Allotment", "Flow", "Flow (af)")
+      temp_new_data[5, 1:4] <- c("COB_CBT_Used", "COB Used CBT Water", "Flow", "Flow (af)")
+      temp_new_data[6, 1:4] <- c("COB_CBT_Unused", "COB Unused CBT Water", "Flow", "Flow (af)")
+
       temp_new_data <- as.data.frame(temp_new_data)
       colnames(temp_new_data) <- c("Name", "Description", "Parameter", "Units")
 
@@ -1557,14 +1565,13 @@ for(z in 1:nrow(base_mods)) {
 
 
       # convert from wide to long format
-      annual_extract_long <- annual_extract %>%
-        pivot_longer(., cols = c(DataObject_3_Flow, Decree75_QM1_24, Decree75_QM25_48, DataObject_44_Flow,
-                                 COB_CBT_allotment, COB_CBT_TotalUse, COB_CBT_Unused,
-                                 COB_CBT_NormalUse, COB_CBT_BorrowedWinter, COB_CBT_YeartoYearDebt),
+      annual_extract_long <- final_data %>%
+        pivot_longer(., cols = c(Decree75_QM5_24, Decree75_QM25_48, Decree75_QM1_4,
+                                 COB_CBT_allotment, COB_CBT_Used, COB_CBT_Unused),
                      names_to = "Name", values_to = "Value") %>%
         left_join(., cbt_group_description, by = "Name") %>%
         left_join(., definitions2, by = "Name")
-
+      annual_extract_long
 
 
       g <- list()
@@ -1579,12 +1586,15 @@ for(z in 1:nrow(base_mods)) {
         # annual_extract_long_plot <- annual_extract_long %>%
         #   filter(Group == "CBT Component" & ModelRun == scenario_name[i])
 
+        annual_extract_long2 <- annual_extract_long %>%
+          filter(Group == "CBT Summary", Description == "COB Used CBT Water")
 
         # make a stacked area plot of the reusable supply scenario
         g[[i]] <- ggplot() +
-          geom_bar(data = filter(annual_extract_long, Group == "CBT Component" & ModelRun == scenario_name[i]),
+          geom_bar(data = filter(annual_extract_long2, Group == "CBT Summary" & ModelRun == scenario_name[i]),
                    aes_string(x = "year", y = "Value", fill = "Description"),
                    position = "stack", stat = "identity", color = "black", size = 0.05) + #
+          scale_fill_manual(values = "cornflowerblue") +
           geom_line(data = filter(annual_extract_long, Group == "Total CBT" & ModelRun == scenario_name[i]),
                     aes_string(x = "year", y = "Value", color = "Name"),
                     size = 0.75) +
@@ -1614,7 +1624,7 @@ for(z in 1:nrow(base_mods)) {
           theme_bw() +
           ylab("Flow (af)") +
           xlab("Water Year") +
-          ylim(0, 22000) +
+          ylim(NA, 22000) +
           scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
           ggtitle(paste(scenario_name[i], ": CBT Water by Year", sep = "")) +
           theme(plot.title = element_text(size = title_size),
@@ -1648,312 +1658,36 @@ for(z in 1:nrow(base_mods)) {
                      top = plot_title,
                      right = ""))
 
+      ### add table of cbt use
 
       ### New annual table analysis
-      annual_extract_table <-
-        annual_extract %>%
-        select(year, ModelRun, COB_CBT_TotalUse, COB_CBT_Unused) %>%
+      annual_extract_table <- final_data %>%
+        select(year, ModelRun, COB_CBT_Used, COB_CBT_Unused) %>%
         group_by(ModelRun) %>%
-        summarise('CBT Use (mean)' = round(mean(COB_CBT_TotalUse),0), 'CBT Use (min)' = min(COB_CBT_TotalUse),
-                  'CBT Use (max)' = max(COB_CBT_TotalUse),
+        summarise('CBT Use (mean)' = round(mean(COB_CBT_Used),0), 'CBT Use (min)' = min(COB_CBT_Used),
+                  'CBT Use (max)' = max(COB_CBT_Used),
                   'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0), 'Unused CBT (min)' = min(COB_CBT_Unused),
-                  'Unused CBT (max)' = max(COB_CBT_Unused))
+                  'Unused CBT (max)' = max(COB_CBT_Unused)) %>%
+        gt() %>%
+        tab_header(
+          title = md("City of Boulder Annual C-BT Water Use"),
+          subtitle = md(paste0(scenario_name[1], " vs ", scenario_name[2]))
+        )
       annual_extract_table
 
       # when COB borrows water from CBT (year-to-year debt) it creates a negative CBT use (debit).
       # adjust the minimum value (if zero) so that it's not negative
-      annual_extract_table$`Unused CBT (min)` <- if_else(annual_extract_table$`Unused CBT (min)` < 0, 0, annual_extract_table$`Unused CBT (min)`)
+      # annual_extract_table$`Unused CBT (min)` <- if_else(annual_extract_table$`Unused CBT (min)` < 0, 0, annual_extract_table$`Unused CBT (min)`)
 
 
-      # ### run a monthly analysis
-      # extract_list <- list()
-      # for (i in 1:n_file_prefix){
-      #
-      #   extract_list[[i]] <- data_list[[i]] %>%
-      #     #group_by(ModelRun) %>%
-      #     select(!!!syms(site_selection)) %>%
-      #     group_by(year, Month, ModelRun) %>%
-      #     summarise(across(site_selection[6]:site_selection[n_site_selection], sum))
-      #
-      #   # %>%
-      #   #   left_join(., qm_convert, by = c("qm" = "QM")) %>%
-      #   #   select(-'WY-QM', -Water.Year, -wyqm, -Cal.Year, -'QM start day', -'QM end day',
-      #   #          -Start.Date, -End.Date, -'Days in QM')
-      #   #   #group_by(qm, ModelRun) %>%
-      #     # faster way to do this (but it doesn't adjust column names)
-      #     # summarise(across(site_selection[5]:site_selection[n_site_selection], mean))
-      #
-      # }
-      # extract_list[[1]]
-      #
-      # # merge the data from the loops together
-      # monthly_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-      #   group_by(Month, ModelRun) %>%
-      #   summarise(., Min=min(Decree_75_Flow),
-      #             Average=round(mean(Decree_75_Flow), 0), Max=max(Decree_75_Flow)) %>%
-      #   pivot_wider(names_from = c(ModelRun), values_from = c(Min, Average, Max)) %>%
-      #   # it's more complicated to rename the columns a variable names
-      #   # use the !! (bang, bang) operator before paste to name the function
-      #   # then use := operator to force names on the LHS of the equation.
-      #   rename(!!(paste(scenario_name[1], " (Min)", sep = "")) :=  paste("Min_", scenario_name[1], sep = ""),
-      #          !!(paste(scenario_name[1], " (Avg)", sep = "")) :=  paste("Average_", scenario_name[1], sep = ""),
-      #          !!(paste(scenario_name[1], " (Max)", sep = "")) :=  paste("Max_", scenario_name[1], sep = "")
-      #          ) %>%
-      #   rename(!!(paste(scenario_name[2], " (Min)", sep = "")) :=  paste("Min_", scenario_name[2], sep = ""),
-      #          !!(paste(scenario_name[2], " (Avg)", sep = "")) :=  paste("Average_", scenario_name[2], sep = ""),
-      #          !!(paste(scenario_name[2], " (Max)", sep = "")) :=  paste("Max_", scenario_name[2], sep = "")
-      #   ) %>%
-      #   relocate(paste(scenario_name[2], " (Avg)", sep = ""), .after = paste(scenario_name[2], " (Min)", sep = "")) %>%
-      #   relocate(paste(scenario_name[2], " (Max)", sep = ""), .after = paste(scenario_name[2], " (Min)", sep = ""))
-      #
-      #
-      #
-      #
-      # ### Calculate the remaining CBT Quota
-      # site_selection <- c("year", "qm", "Month", "Date", "ModelRun", "Decree_75_Content",
-      #                     "DataObject_3_Flow")
-      # n_site_selection <- length(site_selection)
-      #
-      # ### run an annual analysis
-      # extract_list <- list()
-      # for (i in 1:n_file_prefix){
-      #
-      #   extract_list[[i]] <- data_list[[i]] %>%
-      #     # select the columns of interest from the vector above using !!!syms to read it properly
-      #     select(!!!syms(site_selection)) %>%
-      #     # get the Boulder CBT capacity on March 31, before the new quota is called on April 1
-      #     # (the CBT decree capacity resets to 0 in model on QM 25)
-      #     filter(qm == 24) %>%
-      #     # make a new column that offsets the year by 1 to reflect when that water was actually used
-      #     mutate(cbt_year_taken = year - 1) %>%
-      #     select(-Month, -DataObject_3_Flow)
-      #
-      # }
-      # cbt_water_used_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-      #   # order output by modelID then year (to help with column binds later)
-      #   arrange(ModelRun, year)
-      #
-      #
-      #
-      # ### get the annual CBT borrow/carryover water (DataObject 3)
-      # cob_cbt_borrow_list <- list()
-      # for (i in 1:n_file_prefix){
-      #
-      #   cob_cbt_borrow_list[[i]] <- data_list[[i]] %>%
-      #     # select the columns of interest from the vector above using !!!syms to read it properly
-      #     select(!!!syms(site_selection)) %>%
-      #     # get the Boulder CBT borrow volume, which is decided on QM 5 in the model
-      #     filter(qm == 5) %>%
-      #     # make a new column that offsets the year by 1 to reflect when that water was actually used
-      #     #mutate(cbt_year_taken = year - 1) %>%
-      #     select(-Month, -Decree_75_Content) %>%
-      #     # order output by modelID then year (to help with column binds later)
-      #     arrange(ModelRun, year) %>%
-      #     # rename date column so it is distinct from others
-      #     rename(Date_QM5 = Date)
-      #
-      # }
-      # cob_cbt_borrow <- bind_rows(cob_cbt_borrow_list[[1]], cob_cbt_borrow_list[[2]]) %>%
-      #   # filter the years to match the cbt water taken vs water year
-      #   filter(year >= 1915 & year <= 2013)
-      #
-      #
-      # # get the cbt quota data & remove the last year of data
-      # Quota_annual2 <- Quota_annual %>%
-      #   filter(Year >= 1915 & Year <= 2013)
-      #
-      #
-      # # # merge the data from the loops together
-      # # cbt_unused_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-      # #   arrange(ModelRun, year)
-      #
-      # # merge the data from the loops together
-      # cbt_water_used_extract2 <- cbt_water_used_extract %>%
-      #   # filter the years to match the cbt water taken vs water year
-      #   filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2013) %>%
-      #   # add the annual COB CBT borrow water
-      #   bind_cols(., cob_cbt_borrow) %>%
-      #   # add the actual annual c-bt quota
-      #   bind_cols(., Quota_annual2) %>%
-      #   # calculate the maximum COB CBT quota water they can use
-      #   mutate(MaxQuotaWater = 21174 * Quota) %>%
-      #   # calculate CBT borrow + normal cbt COB quota use
-      #   mutate(UsedQuota = Decree_75_Content + DataObject_3_Flow) %>%
-      #   # calculate the unused quota water
-      #   mutate(UnusedQuota = MaxQuotaWater - UsedQuota) %>%
-      #   # rename duplicate columns from merging datasets
-      #   rename(ModelRun = ModelRun...4, ModelRunBorrow = ModelRun...10, ModelRunQuota = ModelRun...13)
-      #
-      # cbt_unused_extract_table <- cbt_water_used_extract2 %>%
-      #   # calculate annual min, max, avg of unused quota water
-      #   group_by(ModelRun) %>%
-      #   summarise(., Average=round(mean(UnusedQuota),0), Max=max(UnusedQuota))
-      #
-      # g <- list()
-      # for (i in 1:n_scenario_name){
-      #
-      #   # subset the data for only the data needed & filter for the necessary scenario
-      #   cbt_unused_extract_plot <- cbt_water_used_extract2 %>%
-      #     select(cbt_year_taken, ModelRun, MaxQuotaWater, UsedQuota, UnusedQuota) %>%
-      #     filter(ModelRun == scenario_name[i]) %>%
-      #     pivot_longer(., cols = c(UsedQuota, UnusedQuota), names_to = "CBT_Water", values_to = "Flow_af")
-      #
-      #
-      #   # make a stacked area plot of the reusable supply scenario
-      #   g[[i]] <- ggplot(cbt_unused_extract_plot, aes_string(x = "cbt_year_taken", y = "Flow_af", fill = "CBT_Water")) +
-      #     geom_bar(position="stack", stat="identity", color = "black", size = 0.05) + #
-      #     #geom_line(aes_string(x = "cbt_year_taken", y = "MaxQuotaWater"), size = 0.75, color = "black") +
-      #     #geom_area() +  #col = color_list[i]
-      #     theme_bw() +
-      #     ylab("Flow (af)") +
-      #     xlab("Water Year") +
-      #     ylim(0, 22000) +
-      #     ggtitle(paste(scenario_name[i], ": CBT Water by Year", sep = "")) +
-      #     theme(plot.title = element_text(size = title_size),
-      #           axis.title = element_text(size = xaxis_size))
-      #   #scale_fill_manual(values = c("#0073C2FF", "#EFC000FF", ))
-      #   #g[[i]]
-      #
-      #
-      # }
-
-      # # define the plot name
-      # plot_title <- "2a. C-BT Annual Water Use"
-      # file_name <- paste(plot_title, " 2x1 ", sep = "")
-      #
-      # ggsave(
-      #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-      #         output_folder, ".pdf", sep = ""),
-      #   width = 14, height = 8,
-      #   grid.arrange(g[[1]], g[[2]], nrow = 2,
-      #                top = plot_title,
-      #                right = ""))
-
-
-
-      ### export the two datasets as tables to ggarrange
-      # set the theme, sizes
-      size <- 1
-      size1 <- 1
-      tt <- ttheme_default(core = list(fg_params=list(cex = size)),
-                           colhead = list(fg_params=list(cex = size1)),
-                           rowhead = list(fg_params=list(cex = size)))
-
-
-      ### Table 1
-      tbl_temp_a <- tableGrob(annual_extract_table, theme = tt, rows = NULL)
-      # add grid around the headers
-      tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                    t = 1, l = 1, r = ncol(tbl_temp_a))
-      # add box around the first column of data
-      tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                    t = 1, b = nrow(tbl_temp_a), l = 1, r = 1)
-      # add box around the second model run of data
-      tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                    t = 1, b = nrow(tbl_temp_a), l = 2, r = 4)
-      # add box around the second model run of data
-      tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                    t = 1, b = nrow(tbl_temp_a), l = 5, r = ncol(tbl_temp_a))
-
-      grid.draw(tbl_temp_a)
-
-
-      # ### Table 2
-      # # add box around the column headers
-      # tbl_temp_b <- tableGrob(monthly_extract, theme = tt, rows = NULL)
-      # # add grid around the headers
-      # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-      #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                              t = 1, l = 1, r = ncol(tbl_temp_b))
-      # # add box around the first column of data
-      # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-      #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                              t = 1, b = nrow(tbl_temp_b), l = 1, r = 1)
-      # # add box around the first model run of data
-      # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-      #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                              t = 1, b = nrow(tbl_temp_b), l = 2, r = 4)
-      # # add box around the second model run of data
-      # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-      #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                               t = 1, b = nrow(tbl_temp_b), l = 5, r = ncol(tbl_temp_b))
-      # grid.draw(tbl_temp_b)
-      #
-      #
-      # ### Table 3
-      # tbl_temp_c <- tableGrob(cbt_unused_extract_table, theme = tt, rows = NULL)
-      # # add grid around the headers
-      # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-      #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                               t = 1, l = 1, r = ncol(tbl_temp_c))
-      # # add box around the first model run of data
-      # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-      #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                               t = 2, b = nrow(tbl_temp_c), l = 1, r = ncol(tbl_temp_c))
-      # # add box around the first column of data
-      # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-      #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-      #                               t = 1, b = nrow(tbl_temp_c), l = 1, r = 1)
-      #
-      # grid.draw(tbl_temp_c)
-      #
-      #
-      #
-      # # define the plot name
-      # plot_title <- "2b. C-BT Quota Annual and Monthly Summary Tables"
-      # file_name <- paste(plot_title, " 2x2 ", sep = "")
-      #
-      # # # save the plot
-      # # ggsave(
-      # #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-      # #         output_folder, ".pdf", sep = ""),
-      # #   width = 14, height = 8,
-      # #   grid.arrange(tbl_temp_a, tbl_temp_c, tbl_temp_b, nrow = 2,
-      # #                top = plot_title,
-      # #                right = "", bottom = "",
-      # #                layout_matrix = rbind(c(1, 2),
-      # #                                      c(3, 3))),
-      # #   grid.text("Plot header", x = unit(0.5, "npc"), y = unit(.51, "npc"),
-      # #             gp = gpar(fontsize=20, fontfamily="Times New Roman")))
-
+      # define the table export name & save
       plot_title <- "2ac. COB C-BT Annual Water Use"
-      file_name <- paste(plot_title, " 1x1 ", sep = "")
+      file_name <- paste0(plot_title, " table ")
 
-      # save the plot
-      # pdf(
-      #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-      #         output_folder, ".pdf", sep = ""),
-      #   width = 14, height = 8)
-
-      # grid.arrange(tbl_temp_a, tbl_temp_c, tbl_temp_b, nrow = 2,
-      #              top = plot_title,
-      #              right = "", bottom = "",
-      #              layout_matrix = rbind(c(1, 1),
-      #                                    c(3, 3)))
-      tbl_temp_a2 <- grid.arrange(tbl_temp_a, nrow = 1,
-                   top = plot_title,
-                   right = "", bottom = "",
-                   layout_matrix = rbind(c(1, 1),
-                                         c(3, 3)))
-
-      ggsave(
-        filename =  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",                    output_folder, ".png", sep = ""),
-        width = 14,
-        height = 8,
-        tbl_temp_a2
-             )
-      grid.text("Annual C-BT Water Use", x = unit(0.5, "npc"), y = unit(0.81, "npc"),
-                gp = gpar(fontsize = 14))
-      # grid.text("Annual Unused C-BT Water", x = unit(0.75, "npc"), y = unit(0.81, "npc"),
-      #           gp = gpar(fontsize = 14))
-      # grid.text("Monthly C-BT Water", x = unit(0.5, "npc"), y = unit(0.52, "npc"),
-      #           gp = gpar(fontsize = 14))
-
-      dev.off()
+      gtsave(data = annual_extract_table,
+             filename = paste0(model_folder, "/", output_folder, "/", file_name, model_version, ".png"),
+             zoom = 0.9
+      )
 
       # rm(site_selection, n_site_selection, extract_list, extract, annual_extract, monthly_extract,
       #    cob_cbt_borrow_list, cob_cbt_borrow, Quota_annual2,
@@ -2685,7 +2419,7 @@ for(z in 1:nrow(base_mods)) {
 
       rm(cbt_windygap, cbt_windygap2, extract, extract2, final, final_site_list, n_final_site_list)
 
-#       Plot 2k shows Boulder Reservoir data. Can you modify this so it's the following:
+#       Plot  shows Boulder Reservoir data. Can you modify this so it's the following:
 # DataObject_1_Flow (COB CBT Water)
 # DataObject_29_Flow (COB WG Water)
 # NEW MUTATE OBJECT NAME = DataObject_1_Flow + DataObject_29_Flow (COB Total Boulder Res Storage)
@@ -2697,7 +2431,7 @@ for(z in 1:nrow(base_mods)) {
 
 
 
-      # CBT WG Boulder Res qm output 2k -----------------------------------------
+      # CBT WG Boulder Res qm output  -----------------------------------------
 # i <- 1
       rm(i)
       extract <- list()
@@ -2778,7 +2512,7 @@ for(z in 1:nrow(base_mods)) {
           theme_bw() +
           ylim(0, NA) +
           ggplot2::labs(
-            title = paste0(title_name, " - ", desc),
+            title = paste0(title_name, " = ", desc),
             y = ylab,
             x = "Water Year"
           ) +
@@ -4005,7 +3739,7 @@ for(z in 1:nrow(base_mods)) {
   # put to long form
   extract2 <- extract %>%
     # convert from 'wide' to 'long' format for plotting w/ ggplot
-    pivot_longer(., cols = c("COB_Total_Boulder_Res_Storage", "DataObject_2_Flow", "Reservoir_13_Content"),
+    pivot_longer(., cols = c("COB_Total_Boulder_Res_Storage", "DataObject_2_Flow", "Reservoir_12_Content"),
                  names_to = "Name", values_to = "Output") %>%
   dplyr::left_join(
     definitions,
@@ -4025,7 +3759,7 @@ for(z in 1:nrow(base_mods)) {
         TRUE                                    ~ Units
       )
     )
-  extrac2_site_list <- c("DataObject_1_Flow + DataObject_29_Flow", "DataObject_2_Flow", "Reservoir_13_Content")
+  extrac2_site_list <- c("DataObject_1_Flow + DataObject_29_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
   n_extrac2_site_list <- length(extrac2_site_list)
   y_lab_list <- c(rep("Flow (af)", 10), rep("Contents (af)", 3))
 
@@ -4062,7 +3796,7 @@ for(z in 1:nrow(base_mods)) {
   }
 
   # define the plot name
-  plot_title <- "2l. Boulder Res QM - Time Series Plot"
+  plot_title <- "2l. Boulder Reservoir QM Contents - COB & Nortern"
   file_name <- paste(plot_title, " 3x1 ", sep = "")
 
   # save the plot

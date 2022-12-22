@@ -688,11 +688,11 @@ comp_mods <-
   # ***********************
   # ---- Plot 2A + 2AB ----
   # ***********************
-
+  # quota_df = quota
   # CBT, Windy Gap, Reusable Water Exchange Analysis
   cbt_quota <-
     outputs %>%
-    process_cbt_quota(quota_df = quota) %>%
+    process_cbt_quota2(definitions_df = definitions) %>%
     dplyr::mutate(
       model_run = factor(model_run, levels = c(rev(scenario_name))),
       year = as.numeric(year)
@@ -704,19 +704,18 @@ comp_mods <-
   message(paste0("Plotting: CBT Quota Components"))
 
   # plot 2A, loop through each site and plot
-  cbt_quota_component_lst <- lapply(1:length(cbt_quota_runs), function(i) {
+  cbt_quota_used_lst <- lapply(1:length(cbt_quota_runs), function(i) {
 
-    # message(paste0("Plotting: ", cbt_quota_runs[i]))
+    cbt_used_plots <-
+      make_cbt_used_plot(
+        df         = cbt_quota,
+        mod_run    = cbt_quota_runs[i],
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
 
-    cbt_component_plot <-
-      make_cbt_component_plot(
-                df         = cbt_quota,
-                mod_run    = cbt_quota_runs[i],
-                title_size = title_size,
-                xaxis_size = xaxis_size
-              )
 
-    cbt_component_plot
+    cbt_used_plots
 
   }) %>%
     stats::setNames(c(cbt_quota_runs))
@@ -724,18 +723,20 @@ comp_mods <-
   message(paste0("Plotting: CBT Quota Summary"))
 
   # plot 2AB, loop through each site and plot
-  cbt_quota_summary_lst <- lapply(1:length(cbt_quota_runs), function(i) {
+  cbt_quota_unused_lst <- lapply(1:length(cbt_quota_runs), function(i) {
 
     # message(paste0("Plotting: ", cbt_quota_runs[i]))
 
-    cbt_summary_plot <-
-      make_cbt_summary_plot(
-            df         = cbt_quota,
-            mod_run    = cbt_quota_runs[i],
-            title_size = title_size,
-            xaxis_size = xaxis_size
-          )
-    cbt_summary_plot
+    cbt_unused_plots <-
+      make_cbt_unused_plot(
+        df         = cbt_quota,
+        mod_run    = cbt_quota_runs[i],
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
+
+
+    cbt_unused_plots
 
   }) %>%
     stats::setNames(c(cbt_quota_runs))
@@ -746,8 +747,8 @@ comp_mods <-
     width    = 14,
     height   = 8,
     gridExtra::grid.arrange(
-      cbt_quota_component_lst[[cbt_quota_runs[[1]]]],
-      cbt_quota_component_lst[[cbt_quota_runs[[2]]]],
+      cbt_quota_used_lst[[cbt_quota_runs[[2]]]],
+      cbt_quota_used_lst[[cbt_quota_runs[[1]]]],
       nrow   = 2,
       top    = "2a. C-BT Annual Water Use",
       right  = "",
@@ -761,8 +762,8 @@ comp_mods <-
     width    = 14,
     height   = 8,
     gridExtra::grid.arrange(
-      cbt_quota_summary_lst[[cbt_quota_runs[[1]]]],
-      cbt_quota_summary_lst[[cbt_quota_runs[[2]]]],
+      cbt_quota_unused_lst[[cbt_quota_runs[[2]]]],
+      cbt_quota_unused_lst[[cbt_quota_runs[[1]]]],
       nrow   = 2,
       top    = "2ab. COB C-BT Annual Unused Water",
       right  = "",
@@ -777,24 +778,31 @@ comp_mods <-
 
   # CBT, Windy Gap, Reusable Water Exchange Analysis
   cbt_quota_tbl  <-
-    outputs %>%
-    process_cbt_quota_tbl(quota_df = quota) %>%
-    make_cbt_quota_tbl(size = 1) %>%
-    gridExtra::grid.arrange(
-      nrow          = 1,
-      top           = "2ac. COB C-BT Annual Water Use 1x1",
-      right         = "",
-      bottom        = "",
-      layout_matrix = rbind(c(1, 1), c(3, 3))
-    )
+    cbt_quota %>%
+    process_cbt_quota_tbl() %>%
+    make_cbt_quota_tbl2()
+    # make_cbt_quota_tbl(size = 1) %>%
+    # gridExtra::grid.arrange(
+    #   nrow          = 1,
+    #   top           = "2ac. COB C-BT Annual Water Use 1x1",
+    #   right         = "",
+    #   bottom        = "",
+    #   layout_matrix = rbind(c(1, 1), c(3, 3))
+    # )
 
   # Save table 2AC
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use 1x1.png"),
-    width    = 14,
-    height   = 8,
-    plot     = cbt_quota_tbl
+  gt::gtsave(
+    data     = cbt_quota_tbl,
+    filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use table.png"),
+    zoom     = 1
   )
+  # Save table 2AC
+  # ggplot2::ggsave(
+  #   filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use 1x1.png"),
+  #   width    = 14,
+  #   height   = 8,
+  #   plot     = cbt_quota_tbl
+  # )
   # *****************
   # ---- Plot 2E ----
   # *****************
