@@ -16,6 +16,7 @@ library(gridExtra)
 library(RColorBrewer)
 library(gtable)
 library(grid)
+library(gt)
 
 source("R/process_quota.R")
 source("R/parse_directory.R")
@@ -46,7 +47,7 @@ base_mods <-
     # model_id %in% c("ID1"),
     # model_version %in% c("055c")
     # output == "OutputSheet"
-    grepl("0101.DRRP_DroughtPlan_2020_055e_CC_ID1", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_8500NoBorrow4.5mgd_ID1_7525", file),
      output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -67,7 +68,7 @@ comp_mods <-
   model_dirs %>%
   dplyr::filter(
     # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
-    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_8500NoBorrow17mgd_ID1_7525", file),
     output == "OutputSheet"
   ) %>%
   # dplyr::group_by(extra_info) %>%
@@ -83,7 +84,7 @@ comp_mods <-
 base_extra_txt <-
   model_dirs %>%
   dplyr::filter(
-    grepl("0101.DRRP_DroughtPlan_2020_055e_CC_ID1", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_8500NoBorrow4.5mgd_ID1_7525", file),
     output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -97,7 +98,7 @@ base_extra_txt
 comp_extra_txt <-
   model_dirs %>%
   dplyr::filter(
-    grepl("0101.DRRP_DroughtPlan_2020_055e_10000NoBorrow17mgd_ID1", file),
+    grepl("0101.DRRP_DroughtPlan_2020_055e_8500NoBorrow17mgd_ID1_7525", file),
     output == "OutputSheet"
   ) %>%
   dplyr::group_by(model_version, model_id, model_num) %>%
@@ -2404,16 +2405,28 @@ for(z in 1:nrow(base_mods)) {
       }
 
       # define the plot name
-      plot_title <- "2j. CBT-Windy Gap in out - Time Series Plot"
-      file_name <- paste(plot_title, " 3x2 ", sep = "")
+      plot_title <- "2j. Boulder Reservoir Inflow Outflow - Time Series Plot"
+      file_name <- paste(plot_title, " 5x2 ", sep = "")
 
       # save the plot
       ggsave(
         paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
               output_folder, device_type, sep = ""),
         width = 14, height = 8,
-        grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]],
-                     p[[7]], p[[8]], p[[9]], p[[10]], p[[11]], p[[12]], p[[13]], nrow = 7,
+        grid.arrange(p[[1]],
+                     p[[2]],
+                     p[[3]],
+                     p[[4]],
+                     p[[5]],
+                     # p[[6]],
+                     p[[7]],
+                     p[[8]],
+                     # p[[9]],
+                     # p[[10]],
+                     p[[11]],
+                     p[[12]],
+                     p[[13]],
+                     nrow = 5,
                      top = plot_title,
                      right = ""))
 
@@ -3712,7 +3725,7 @@ for(z in 1:nrow(base_mods)) {
       group_by(ModelRun) %>%
       # select the columns of interest from the vector above using !!!syms to read it properly
       select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow", "DataObject_2_Flow",
-             "Reservoir_13_Content") %>%
+             "Reservoir_12_Content") %>%
       # select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow") %>%
       dplyr::group_by(year, Date, ModelRun) %>%
       dplyr::mutate(COB_Total_Boulder_Res_Storage = DataObject_1_Flow + DataObject_29_Flow) %>%

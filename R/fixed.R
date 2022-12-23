@@ -1039,7 +1039,72 @@ comp_mods <-
   )
 
   # *****************
-  # ---- Plot 2I ----
+  # ---- Plot 2J ----
+  # *****************
+  # new WG in out
+
+  # CBT Windygap process
+  cbt_wg <-
+    outputs %>%
+    process_cbt_windygap() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+    )
+
+  # sites to loop over and plot
+  cbt_wg_sites <- unique(cbt_wg$name)
+
+  # plot 2AB, loop through each site and plot
+  cbt_wg_lst <- lapply(1:length(cbt_wg_sites), function(i) {
+
+    extract_df <-
+      cbt_wg %>%
+      dplyr::filter(name == cbt_wg_sites[i])
+
+    message(paste0("Plotting: CBT Windygap - ", cbt_wg_sites[i]))
+
+    cbt_wg_plot <-
+      make_cbt_windygap_plot(
+        df         = extract_df,
+        site       = cbt_wg_sites[i],
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
+
+
+    cbt_wg_plot
+
+  }) %>%
+    stats::setNames(c(cbt_wg_sites))
+
+  # save plot 2J
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "2j. Boulder Reservoir Inflow Outflow - Time Series Plot 5x2.png"),
+    width    = 14,
+    height   = 8,
+      gridExtra::grid.arrange(
+        cbt_wg_lst[["Decree_75_Flow"]],
+        cbt_wg_lst[["Link_499_Flow"]],
+        cbt_wg_lst[["Link_451_Flow"]],
+        cbt_wg_lst[["Link_452_Flow"]],
+        cbt_wg_lst[["Link_375_Flow"]],
+        cbt_wg_lst[["Link_457_Flow"]],
+        cbt_wg_lst[["Link_454_Flow"]],
+        cbt_wg_lst[["DataObject_29_Flow"]],
+        cbt_wg_lst[["DataObject_1_Flow"]],
+        cbt_wg_lst[["DataObject_2_Flow"]],
+        nrow   = 5,
+        top    = "2j. Boulder Reservoir Inflow Outflow - Time Series Plot",
+        right  = ""
+      )
+  )
+
+  # *****************
+  # ---- Plot 2K ----
+  # *****************
+
+  # *****************
+  # ---- Plot 2L ----
   # *****************
 
   # ***************

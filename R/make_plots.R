@@ -1,3 +1,35 @@
+make_cbt_windygap_plot <- function(
+    df,
+    site,
+    title_size,
+    xaxis_size
+) {
+
+    cbt_wg_plot <-
+      df %>%
+      ggplot2::ggplot() +
+      ggplot2::geom_line(
+        ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+      ) +
+      # ggplot2::facet_wrap(~name, nrow = 5) +
+      ggplot2::ylim(0, NA) +
+      ggplot2::labs(
+        title    = site,
+        y        = "Flow (af)",
+        x        = "Water year",
+        color    = "Model run",
+        linetype = "Model run"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+
+  return(cbt_wg_plot)
+
+}
+
 make_res_reusable_water_plot <- function(
     df,
     timescale = "annual",
