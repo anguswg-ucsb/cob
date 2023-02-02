@@ -118,13 +118,22 @@ cram_type <- function() {
     data.frame(
       Name = c("DataObject_30_Flow", "Reservoir_1_Content",
                "DataObject_28_Flow", "Reservoir_3_Content",
-               "DataObject_29_Flow", "DataObject_1_Flow"),
+               "DataObject_29_Flow", "DataObject_1_Flow",
+               "Link_617_Flow",      "Link_618_Flow",
+               "Decree_125_Content", "Link_571_Flow",
+               "Link_572_Flow",      "Link_573_Flow"),
       Type = c("Reusable Water", "Total Contents",
                "Reusable Water", "Total Contents",
-               "Reusable Water", "Total COB Contents"),
+               "Reusable Water", "Total COB Contents",
+               "Inflow",         "Inflow",
+               "Decree Capacity","Inflow",
+               "Inflow",         "Outflow"),
       Group = c("NBC Reservoir", "NBC Reservoir",
                 "Barker Reservoir", "Barker Reservoir",
-                "Boulder Reservoir", "Boulder Reservoir")
+                "Boulder Reservoir", "Boulder Reservoir",
+                NA, NA, NA,
+                NA, NA, NA
+                )
     )
   return(tmp)
 

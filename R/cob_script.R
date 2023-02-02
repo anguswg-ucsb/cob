@@ -16,2031 +16,200 @@ library(gridExtra)
 library(RColorBrewer)
 library(gtable)
 library(grid)
-
-source("R/make_lookup.R")
-source("R/make_plots.R")
-source("R/process_output.R")
-source("R/process_demand.R")
-source("R/process_isf.R")
+library(gt)
 source("R/process_quota.R")
-source("R/process_drought_index.R")
-source("R/process_annual_summary.R")
-source("R/process_mass_balance.R")
-source("R/process_reuse_water_exchange.R")
-source("R/process_cbt_quota.R")
-source("R/process_res_reuse_storage.R")
 source("R/parse_directory.R")
-source("R/process_cbt_windygap.R")
-source("R/process_inputs.R")
-
-# process_cbt_quota
 source("R/utils.R")
 
+
+# ********************
+# ---- Setup data ----
+# ********************
+
+# folder w/ model runs
 base_folder <- "D:/cob/latest/latest"
+# base_folder = "C:/Users/angus/OneDrive/Desktop/cob/latest/latest"
 # base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# base_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
 
 # info on model files
 model_dirs  <- parse_directory(base_folder = base_folder)
-# tmp <- model_dirs$file[5]
-# str_split(tmp, "_")
-# tmp <- model_dirs$file[59]
-# str_split(tmp, "_")
-# set plot parameters
-title_size = 10
-xaxis_size = 9
 
-# model number/climate
-mod_number <- "Base"
-
-# model version
-mod_version <- "055d"
-
-start_year = 1915
-end_year   = 2014
-
-# model_folder <- "latest"
-model_folder <- "D:/cob/latest/latest"
-# model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
-
-save_path   <- "D:/cob/latest/latest"
-
-# save_path   <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob"
-device_type <- ".png"     # .png, .pdf
-
-# read in the quarter-monthly to date converter
-qm_convert <- readr::read_csv("data-raw/qm_to_date_conversion.csv")
-
-# path to ISF data
-isf_path <-
-  model_dirs %>%
-  dplyr::filter(grepl("ISF", file)) %>%
-  .$path
-
-isf_path
-
-# path to Quota data
-quota_path <-
-  model_dirs %>%
-  dplyr::filter(grepl("Quota", file)) %>%
-  .$path
-
-quota_path
-
-# tmp2 <-
-# base_mods <-
-#   model_dirs %>%
-#   dplyr::filter(
-#     model_id %in% c("ID1"),
-#     model_version %in% mod_version,
-#     # extra_info %in% c("7525"),
-#     model_num %in% mod_number,
-#     # grepl("055c_3143_ID1_7525", file),
-#     output == "OutputSheet"
-#   ) %>%
-#   dplyr::group_by(model_version, model_id, model_num) %>%
-#   dplyr::slice(1) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::filter(
-#     name != "Quota",
-#     model_num == "7525"
-#     ) %>%
-#   dplyr::mutate(
-#     prefix = substr(file, 1, 4)
-#     # prefix = substr(file, 28, 31)
-#   ) %>%
-#   dplyr::select(prefix, model_version, model_id, model_num, extra_info, path)
+base_name = "0000.DRRP_WEP_2023_003_ID1_Base"
+comp_name = "0101.DRRP_WEP_2023_003_ID1_2050_18pctOutdoorReduction_7525"
+file_prefix = c(base_name, comp_name)
+# get details for base model
 base_mods <-
   model_dirs %>%
   dplyr::filter(
-    # grepl("DRRP_DroughtPlan_2020_055a_ID1_7525", file)
-    grepl("0000.DRRP_WEP_2023_003_ID1_Base", file)
+    # model_id %in% c("ID1"),
+    # model_version %in% c("055c")
     # output == "OutputSheet"
-  )
+    grepl(base_name, file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    # model_id = paste0(model_id, "_", "ID1")
+    model_id = paste0("ID1")
+  ) %>%
+  dplyr::mutate(
+    prefix = substr(file, 1, 4)
+    # prefix = substr(file, 28, 31)
+  ) %>%
+  dplyr::select(prefix, model_version, model_id, model_num)
 
+# path to base model file
+base_path <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl(base_name, file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    model_id = paste0("ID1")
+  ) %>%
+  dplyr::mutate(
+    prefix = substr(file, 1, 4)
+  ) %>%
+  .$path
+
+# path to base model file
+base_file <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl(base_name, file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    model_id = paste0("ID1")
+  ) %>%
+  dplyr::mutate(
+    prefix = substr(file, 1, 4)
+  ) %>%
+  .$file
+
+# get details for comparison model
 comp_mods <-
   model_dirs %>%
   dplyr::filter(
-      # grepl("DRRP_DroughtPlan_2020_055a_ID2_7525", file)
-      # grepl("0101.DRRP_WEP_2023_003_ID1_2050_7525_18pctOutdoorReduction", file)
-        grepl("0101.DRRP_WEP_2023_003_ID1_2050_18pctOutdoorReduction_7525", file)
-      # output == "OutputSheet"
-    )
-
-  # base model annual summary
-  base_summary <-
-    base_mods %>%
-    dplyr::filter(
-      output == "OutputAnnualSummary"
-    )
-
-  # comparison model annual summary
-  comp_summary <-
-    comp_mods %>%
-    dplyr::filter(
-      output == "OutputAnnualSummary"
-    )
-
-  # Base output sheet
-  base_out <-
-    base_mods %>%
-    dplyr::filter(
-      output == "OutputSheet"
-    )
-
-  # comparison output sheet
-  comp_out <-
-    comp_mods %>%
-    dplyr::filter(
-      output == "OutputSheet"
-    )
-
-  # Scenario names
-  scenario_name <- c(
-    paste0(
-      base_out$model_num,  "-", base_out$model_id,
-      ifelse(base_out$extra_info == "", "", paste0("_", base_out$extra_info)),
-      "-",
-      base_out$model_version
-    ),
-    paste0(
-      comp_out$model_num,  "-", comp_out$model_id,
-      ifelse(comp_out$extra_info == "", "", paste0("_", comp_out$extra_info)),
-      "-",
-      comp_out$model_version
-    )
-  )
-
-  # output folder
-  output_folder <- paste0(
-    base_out$model_id, "-", base_out$model_num, "-",  gsub("v", "", base_out$model_version),
-    ifelse(base_out$extra_info != "", paste0("-", base_out$extra_info), ""),
-    " vs. ",
-    comp_out$model_id,  "-", comp_out$model_num, "-",  gsub("v", "", comp_out$model_version),
-    ifelse(comp_out$extra_info != "", paste0("-", comp_out$extra_info), "")
-  )
-
-  # Folder to hold all outputs/plots from this script
-  # output_dir <- paste0(save_path, "/", output_folder)
-
-  # Folder to hold all outputs/plots from this script
-  output_dir <- paste0(save_path, "/output")
-
-  # check if directory already exists, if it doesn't create the directory
-  if (!dir.exists(output_dir)) {
-
-    message(paste0("Creating output folder:\n\n  ", output_dir))
-
-    # create /output directory
-    dir.create(output_dir)
-
-    # create model folder directory
-    dir.create(paste0(output_dir, "/", output_folder))
-
-  } else {
-
-    if(!dir.exists(paste0(output_dir, "/", output_folder))) {
-
-      message(paste0("Creating model comparison folder:\n\n  ", output_dir))
-
-      # create model folder directory
-      dir.create(paste0(output_dir, "/", output_folder))
-
-    } else {
-
-      # if model comparison folder already exists
-      message(paste0("Model comparison folder already exists:\n\n  ", output_dir, "/", output_folder))
-
-    }
-  }
-
-  # path to save out destination
-  model_comp_dir <- paste0(output_dir, "/", output_folder)
-  model_comp_dir
-  #
-#   # Model versions
-#   base_model_version        <-  paste0("v", base_mods$model_version)
-#   compare_model_version     <-  paste0("v", comp_mods$model_version)
-#
-#   # version text strings
-#   base_model_version_text    <- base_mods$model_version
-#   compare_model_version_text <- comp_mods$model_version
-#
-#   # model IDs
-#   base_model_ID        <- base_mods$model_id
-#   compare_model_ID     <- comp_mods$model_id
-#
-#   # model ID suffix
-#   base_model_ID_suffix    <- ""        # if this is not needed, keep blank ""
-#   compare_model_ID_suffix <- ""        # if this is not needed, keep blank ""
-#
-#   # climate scenerios
-#   base_climate         <- base_mods$model_num
-#   compare_climate      <- comp_mods$model_num
-#
-#   # model prefixes
-#   base_model_ID_prefix    <- base_mods$prefix
-#   compare_model_ID_prefix <- comp_mods$prefix
-#
-#   # Extra info text that would be found between the model version and the model ID in the file name
-#   base_model_extra_info    <- base_mods$extra_info
-#   compare_model_extra_info <- comp_mods$extra_info
-#
-#   message(paste0("Base model ver: ", base_model_version,
-#                  "\nBase model ID: ", base_model_ID,
-#                  "\nBase model ID suffix: ", base_model_ID_suffix,
-#                  "\nBase model climate: ", base_climate,
-#                  "\nBase model ID prefix: ", base_model_ID_prefix
-#   )
-#   )
-#   message(paste0("Comp model ver: ", compare_model_version,
-#                  "\nComp model ID: ", compare_model_ID,
-#                  "\nComp model ID suffix: ", compare_model_ID_suffix,
-#                  "\nComp model climate: ", compare_climate,
-#                  "\nComp model ID prefix: ", compare_model_ID_prefix
-#   )
-#   )
-
-  # output_folder <- paste0(
-  #   base_model_ID, "-", base_climate, "-",  gsub("v", "",base_model_version), "-", base_model_ID_prefix,
-  #   ifelse(base_model_extra_info != "", paste0("-", base_model_extra_info), ""),
-  #   " vs. ",
-  #   compare_model_ID,  "-", compare_climate, "-",  gsub("v", "", compare_model_version), "-", compare_model_ID_prefix,
-  #   ifelse(compare_model_extra_info != "", paste0("-", compare_model_extra_info), "")
-  # )
-
-  # output_folder
-
-  # file_prefix
-  # path_lst <- c(base_mods$path, comp_mods$path)
-
-  # Scenario names
-  # scenario_name <- c(
-  #   paste0(
-  #     base_climate,  "-", base_model_ID,
-  #     ifelse(base_model_extra_info == "", "", paste0("_", base_model_extra_info)),
-  #     base_model_ID_suffix, "-",
-  #     base_model_version, "_", base_model_ID_prefix
-  #   ),
-  #   paste0(
-  #     compare_climate,  "-", compare_model_ID,
-  #     ifelse(compare_model_extra_info == "", "", paste0("_", compare_model_extra_info)),
-  #     compare_model_ID_suffix, "-",
-  #     compare_model_version, "_", compare_model_ID_prefix
-  #   )
-  # )
-  scenario_name
-
-  # names of columns to select from ISF dataset
-  model_id_subs <- c(
-                    paste0(base_out$model_id, base_out$model_num),
-                    paste0(comp_out$model_id, comp_out$model_num)
-                    )
-  model_id_subs
-
-  # Load ISF data and select columns of interest
-  isf_year_type <-
-    process_isf(
-      isf_path = isf_path
-      ) %>%
-    dplyr::select(wyqm, days_in_qm, dplyr::contains(model_id_subs))
-  message(paste0("Plotting quota data"))
-
-  # Read in the annual CBT Quota data ---------------------------------------
-
-  quota <-
-    process_quota(
-      quota_path = quota_path,
-      model_ids  = model_id_subs,
-      start_year = start_year,
-      end_year   = end_year
-      )
-
-  quota <-
-    dplyr::bind_rows(
-      dplyr::mutate(quota, scenario = scenario_name[1]),
-      dplyr::mutate(quota, scenario = scenario_name[2])
-      ) %>%
-    dplyr::mutate(
-      model_run = factor(scenario, levels = c(rev(scenario_name)))
-      ) %>%
-    dplyr::select(-scenario)
-
-  # levels(quota$model_run)
-
-  # ********************
-  # ---- Quota plot ----
-  # ********************
-
-  # quota plot
-  quota_plot <- make_quota_plot(
-    df         = quota,
-    title_size = title_size,
-    xaxis_size = xaxis_size
-    )
-  quota_plot
-
-  # list of model dataframes
-  mod_lst <- list(base_out, comp_out)
-
-  # loop through model run output sheets and read in and process data
-  outputs <- lapply(1:length(mod_lst), function(y) {
-
-    outs <- process_output(
-      file_df = mod_lst[[y]],
-      date_df = qm_convert
-    ) %>%
-      dplyr::mutate(
-        model_run = scenario_name[y]
-      ) %>%
-      dplyr::relocate(model_run)
-
-  }) %>%
-    dplyr::bind_rows()
-
-  # retrieve lookup table from all Output sheets and keep the distinct rows (no duplicate definitions)
-  definitions <-  lapply(1:length(mod_lst), function(y) {
-
-    make_lookup(output_path = mod_lst[[y]]$path)
-
-  }
+    # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
+    grepl(comp_name, file),
+    output == "OutputSheet"
   ) %>%
-    dplyr::bind_rows() %>%
-    dplyr::distinct()
-
-  # May 1 Drought Trigger Calcs ---------------------------------------------
-  data_annual <- readr::read_csv(
-    base_summary$path,
-    col_names = FALSE
-  )
-
-  # ******************
-  # ---- Table 1A ----
-  # ******************
-
-  message(paste0("Page - 1A"))
-
-  mod_summary_lst <- list(base_summary, comp_summary)
-
-  # loop through model run output sheets and read in and process data
-  data_annual_lst <- lapply(1:length(mod_summary_lst), function(y) {
-
-    message(paste0("Processing annual summary:\n", mod_summary_lst[[y]]$file))
-
-    process_drought_metrics(
-      summary_path = mod_summary_lst[[y]]$path,
-      model_run    = scenario_name[y]
-      )
-
-  }) %>%
-    dplyr::bind_rows()
-
-  # Drought response table
-  tbl_temp <- make_drought_table(
-    df = data_annual_lst
-    )
-  # grid.draw(tbl_temp)
-
-  # *****************
-  # ---- Plot 1A ----
-  # *****************
-
-  # May 1 Annual PSI and Reservoir Storage Plots
-
-  # loop through model run output sheets and extract drought indices for each model run
-  drought_index <- lapply(1:length(scenario_name), function(y) {
-
-    message(paste0("Processing drought indices - ", scenario_name[y]))
-    process_drought_index(
-      output_df = outputs,
-      model_run = scenario_name[y],
-      qm        = 29
-    )
-
-  }) %>%
-    dplyr::bind_rows() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
-      )
-
-  # drought plots to loop over
-  drought_plot_lst <- na.omit(unique(drought_index$title))
-
-  drought_plots <- lapply(1:length(drought_plot_lst), function(z) {
-
-      extract_df <-
-        drought_index %>%
-        dplyr::filter(title == drought_plot_lst[z]) %>%
-        dplyr::rename("Model run" = model_run)
-
-      message(paste0("Plotting: ", drought_plot_lst[z]))
-
-      # Drought response plot
-      if(drought_plot_lst[z] == "Drought Response Level") {
-
-        dplot <- make_drought_response_plot(
-                    df         = extract_df,
-                    plot_name  = drought_plot_lst[z],
-                    ylab_title = unique(extract_df$ylabs),
-                    title_size = title_size,
-                    xaxis_size = xaxis_size
-                  )
-
-      }
-
-      # Drought response plot
-      if(drought_plot_lst[z] == "Projected Storage Index") {
-
-        dplot <- make_psi_plot(
-                      df         = extract_df,
-                      plot_name  = drought_plot_lst[z],
-                      ylab_title = unique(extract_df$ylabs),
-                      title_size = title_size,
-                      xaxis_size = xaxis_size
-                    )
-
-      }
-
-      # Drought response plot
-      if(!drought_plot_lst[z] %in% c("Projected Storage Index", "Drought Response Level")) {
-
-        dplot <- make_res_content_plot(
-          df                = extract_df,
-          plot_name         = drought_plot_lst[z],
-          ylab_title        = unique(extract_df$ylabs),
-          storage_max_hline = unique(extract_df$storage_max),
-          title_size        = title_size,
-          xaxis_size        = xaxis_size
-        )
-
-      }
-
-      dplot
-
-  }) %>%
-    stats::setNames(c(drought_plot_lst))
-
-  # save the plot
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "1a. May 1 Annual Reservoir Contents - Time Series Plot 3x2.png"),
-    width  = 16,
-    height = 8,
-    gridExtra::grid.arrange(
-      drought_plots[["Projected Storage Index"]],
-      drought_plots[["Drought Response Level"]],
-      drought_plots[["Barker Reservoir Contents"]],
-      drought_plots[["NBC Reservoir Contents"]],
-      drought_plots[["Total Upper Reservoir Contents"]],
-      tbl_temp,
-      nrow   = 3,
-      top    = "1a. May 1 Annual Reservoir Contents - Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-    )
-
-  # *****************
-  # ---- Plot 1B ----
-  # *****************
-
-  # Mass Balance by Source calculations and plots
-  message(paste0("Page - 1B"))
-
-  # calculate mass balance by source
-  mass_bal_source <-
-    outputs %>%
-    process_mass_balance_source() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
-      )
-
-  # extra sites of interest (Not CBT_Inflow or WindyGap_)
-  mass_source_sites <- unique(mass_bal_source$name)[!grepl("CBT_Inflow|WindyGap_Inflow", unique(mass_bal_source$name))]
-
-  # loop through each site and plot
-  mass_bal_source_lst <- lapply(1:length(mass_source_sites), function(i) {
-
-    message(paste0("Plotting: ", mass_source_sites[i]))
-
-    extract_df <-
-      mass_bal_source %>%
-      dplyr::filter(name == mass_source_sites[i]) %>%
-      dplyr::rename("Model run" = model_run)
-
-    mass_bal_plot <- make_mass_balance_plot(
-      df         = extract_df,
-      plot_title = unique(extract_df$title),
-      yaxis_max  = unique(extract_df$ylabs_max),
-      title_size = title_size,
-      xaxis_size = xaxis_size
-    )
-
-    mass_bal_plot
-
-  }) %>%
-    stats::setNames(c(mass_source_sites))
-
-  # save the gridded mass balance plots
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "1b. Annual Supply by Water Type with Demands - Time Series Plot 3x2.png"),
-    width    = 14,
-    height   = 8,
-    plot     = gridExtra::arrangeGrob(
-      mass_bal_source_lst[["Direct_Flow_Rights"]],
-      mass_bal_source_lst[["Reservoir_Release"]],
-      mass_bal_source_lst[["Direct_Exchange"]],
-      mass_bal_source_lst[["COB_Water_Demand"]],
-      mass_bal_source_lst[["COB_Indoor_Demand"]],
-      mass_bal_source_lst[["COB_Outdoor_Demand"]],
-      nrow   = 3,
-      top    = "1b. Annual Supply by Water Type with Demands - Time Series Plot",
-      right  = "",
-      left   = "",
-      bottom = ""
-      )
-    )
-
-
-  # *****************
-  # ---- Plot 1C ----
-  # *****************
-
-  # Mass Balance by Source calculations and plots
-  message(paste0("Page - 1C"))
-
-  # calculate mass balance by source
-  mass_bal_pipe <-
-    outputs %>%
-    process_mass_balance_pipeline() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
-    )
-
-  # extra mass balance pipeline sites of interest
-  mass_pipe_sites <- unique(mass_bal_pipe$name)
-
-  # loop through each site and plot
-  mass_bal_pipe_lst <- lapply(1:length(mass_pipe_sites), function(i) {
-
-    message(paste0("Plotting: ", mass_pipe_sites[i]))
-
-    extract_df <-
-      mass_bal_pipe %>%
-      dplyr::filter(name == mass_pipe_sites[i]) %>%
-      dplyr::rename("Model run" = model_run)
-
-    mass_bal_plot <- make_mass_balance_plot(
-      df         = extract_df,
-      plot_title = unique(extract_df$title),
-      yaxis_max  = unique(extract_df$ylabs_max),
-      title_size = title_size,
-      xaxis_size = xaxis_size
-    )
-
-    mass_bal_plot
-
-  }) %>%
-    stats::setNames(c(mass_pipe_sites))
-
-  # save the plot
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "1c. Annual Water Delivery by Pipeline - Time Series Plot 2x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      mass_bal_pipe_lst[["LakewoodtoBetasso"]],
-      mass_bal_pipe_lst[["BarkerGravitytoBetasso"]],
-      mass_bal_pipe_lst[["BoulderRestoWTP"]],
-      mass_bal_pipe_lst[["FarmersRighttoWTP"]],
-      nrow   = 2,
-      top    = "1c. Annual Water Delivery by Pipeline - Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # **********************
-  # ---- Plot 2C + 2D ----
-  # **********************
-
-  # CBT, Windy Gap, Reusable Water Exchange Analysis
-  reuse_water_exchange <-
-    outputs %>%
-    process_reuse_water_exchange() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
-    )
-
-  # extra mass balance pipeline sites of interest
-  reuse_sites <- unique(reuse_water_exchange$name)
-
-  # loop through each site and plot
-  reuse_water_lst <- lapply(1:length(reuse_sites), function(i) {
-
-    message(paste0("Plotting: ", reuse_sites[i]))
-
-    extract_df <-
-      reuse_water_exchange %>%
-      dplyr::filter(name == reuse_sites[i]) %>%
-      dplyr::rename("Model run" = model_run)
-
-    reuse_plot <- make_reuse_water_exchange_plots(
-      df         = extract_df,
-      plot_title = unique(extract_df$title),
-      ylab_title = unique(extract_df$ylabs_title),
-      yaxis_max  = unique(extract_df$ylabs_max),
-      title_size = title_size,
-      xaxis_size = xaxis_size
-    )
-
-    reuse_plot
-
-  }) %>%
-    stats::setNames(c(reuse_sites))
-
-  # save the plot 2C
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2c. CBT-Windy Gap Exchange Total Annual - Time Series Plot 3x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      reuse_water_lst[["CBT_Inflow"]],
-      quota_plot,
-      reuse_water_lst[["WindyGap_Inflow"]],
-      reuse_water_lst[["BoulderRes_WGExchtoBarker"]],
-      reuse_water_lst[["BoulderRes_WGExchtoNBCRes"]],
-      reuse_water_lst[["BoulderRes_WGExctoUpperStor"]],
-      nrow   = 3,
-      top    = "2c. CBT-Windy Gap Exchange Total Annual - Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # save plot 2D
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2d. Reusable Water Annual Storage - Time Series Plot 3x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      reuse_water_lst[["WindyGap_Inflow"]],
-      reuse_water_lst[["BoulderRes_WGExctoUpperStor"]],
-      reuse_water_lst[["BarkerRes_ReusableWater"]],
-      reuse_water_lst[["NBCRes_ReusableWater"]],
-      reuse_water_lst[["BoulderRes_ReusableWater"]],
-      reuse_water_lst[["COB_Reusable_Contents"]],
-      nrow   = 3,
-      top    = "2d. Reusable Water Annual Storage - Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # ***********************
-  # ---- Plot 2A + 2AB ----
-  # ***********************
-  # quota_df = quota
-  # CBT, Windy Gap, Reusable Water Exchange Analysis
-  cbt_quota <-
-    outputs %>%
-    process_cbt_quota2(definitions_df = definitions) %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name))),
-      year = as.numeric(year)
-    )
-
-  # unique quota runs
-  cbt_quota_runs <- unique(cbt_quota$model_run)
-
-  message(paste0("Plotting: CBT Quota Components"))
-
-  # plot 2A, loop through each site and plot
-  cbt_quota_used_lst <- lapply(1:length(cbt_quota_runs), function(i) {
-
-    cbt_used_plots <-
-      make_cbt_used_plot(
-        df         = cbt_quota,
-        mod_run    = cbt_quota_runs[i],
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-
-    cbt_used_plots
-
-  }) %>%
-    stats::setNames(c(cbt_quota_runs))
-
-  message(paste0("Plotting: CBT Quota Summary"))
-
-  # plot 2AB, loop through each site and plot
-  cbt_quota_unused_lst <- lapply(1:length(cbt_quota_runs), function(i) {
-
-    # message(paste0("Plotting: ", cbt_quota_runs[i]))
-
-    cbt_unused_plots <-
-      make_cbt_unused_plot(
-        df         = cbt_quota,
-        mod_run    = cbt_quota_runs[i],
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-
-    cbt_unused_plots
-
-  }) %>%
-    stats::setNames(c(cbt_quota_runs))
-
-  # save plot 2A
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2a. C-BT Annual Water Use 2x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      cbt_quota_used_lst[[cbt_quota_runs[[2]]]],
-      cbt_quota_used_lst[[cbt_quota_runs[[1]]]],
-      nrow   = 2,
-      top    = "2a. C-BT Annual Water Use",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # save plot 2AB
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2ab. COB C-BT Annual Unused Water 2x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      cbt_quota_unused_lst[[cbt_quota_runs[[2]]]],
-      cbt_quota_unused_lst[[cbt_quota_runs[[1]]]],
-      nrow   = 2,
-      top    = "2ab. COB C-BT Annual Unused Water",
-      right  = "",
-      bottom = ""
-    )
-  )
-  # *******************
-  # ---- Table 2AC ----
-  # *******************
-
-  message(paste0("Table: CBT Annual Water Use"))
-
-  # CBT, Windy Gap, Reusable Water Exchange Analysis
-  cbt_quota_tbl  <-
-    cbt_quota %>%
-    process_cbt_quota_tbl() %>%
-    make_cbt_quota_tbl2()
-    # make_cbt_quota_tbl(size = 1) %>%
-    # gridExtra::grid.arrange(
-    #   nrow          = 1,
-    #   top           = "2ac. COB C-BT Annual Water Use 1x1",
-    #   right         = "",
-    #   bottom        = "",
-    #   layout_matrix = rbind(c(1, 1), c(3, 3))
-    # )
-
-  # Save table 2AC
-  gt::gtsave(
-    data     = cbt_quota_tbl,
-    filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use table.png"),
-    zoom     = 1
-  )
-  # Save table 2AC
-  # ggplot2::ggsave(
-  #   filename = paste0(model_comp_dir, "/", "2ac. COB C-BT Annual Water Use 1x1.png"),
-  #   width    = 14,
-  #   height   = 8,
-  #   plot     = cbt_quota_tbl
-  # )
-  # *****************
-  # ---- Plot 2E ----
-  # *****************
-
-  # Reservoir Reusable Storage Annual (only for comparison model)
-  res_reuse_storage <-
-    outputs %>%
-    process_res_reuse_storage(definition_df = definitions) %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
+  # dplyr::group_by(extra_info) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    prefix = substr(file, 1, 4)
+  ) %>%
+  dplyr::select(prefix, model_version, model_id, model_num)
+
+# get details for comparison model
+  comp_path <-
+    model_dirs %>%
+    dplyr::filter(
+      # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
+      grepl(comp_name, file),
+      output == "OutputSheet"
     ) %>%
-    dplyr::filter(model_run == scenario_name[2])
-
-  # Reservoir Reusable Storage Annual Groups to plot
-  res_reuse_storage_sites <- unique(res_reuse_storage$Group)
-  comp_mod_id             <- comp_out$model_id
-
-  # plot 2AB, loop through each site and plot
-  res_reuse_stor_lst <- lapply(1:length(res_reuse_storage_sites), function(i) {
-
-    message(paste0("Plotting: Reservoir Reusable water - ", res_reuse_storage_sites[i]))
-
-    # extract dataframe
-    extract_df <-
-      res_reuse_storage %>%
-      dplyr::filter(Group == res_reuse_storage_sites[i]) %>%
-      dplyr::mutate(
-        year = as.numeric(year)
-
-        )
-
-    # refactor levels
-    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
-
-    extract_df <-
-      extract_df %>%
-      dplyr::mutate(
-        Type = factor(Type, levels = lvls)
-      )
-
-    # Horizontal line y intercept point
-    storage_max <- unique(extract_df$storage_max)
-
-    res_reuse_plot <-
-      make_res_reusable_water_plot(
-        df               = extract_df,
-        timescale        = "annual",
-        storage_max      = storage_max,
-        plot_title       = res_reuse_storage_sites[i],
-        compare_model_id = comp_mod_id,
-        title_size       = title_size,
-        xaxis_size       = xaxis_size
-      )
-    res_reuse_plot
-
-  }) %>%
-    stats::setNames(c(res_reuse_storage_sites))
-
-  # save plot 2E
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2e. Reusable Water in Reservoir - Average Annual Time Series Plot 2x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      res_reuse_stor_lst[["NBC Reservoir"]],
-      res_reuse_stor_lst[["Barker Reservoir"]],
-      res_reuse_stor_lst[["Boulder Reservoir"]],
-      nrow   = 2,
-      top    = "2e. Reusable Water in Reservoir - Average Annual Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 2F ----
-  # *****************
-
-  # Reservoir Reusable Storage Annual (only for comparison model)
-  res_reuse_storage_qm <-
-    outputs %>%
-    process_res_reuse_storage_qm(definition_df = definitions) %>%
+    # dplyr::group_by(extra_info) %>%
+    dplyr::group_by(model_version, model_id, model_num) %>%
+    dplyr::slice(1) %>%
+    dplyr::ungroup() %>%
     dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
+      prefix = substr(file, 1, 4)
     ) %>%
-    dplyr::filter(model_run == scenario_name[2])
-
-  # Reservoir Reusable Storage Annual Groups to plot
-  res_reuse_storage_qm_sites <- unique(res_reuse_storage_qm$Group)
-
-  # plot 2AB, loop through each site and plot
-  res_reuse_stor_qm_lst <- lapply(1:length(res_reuse_storage_qm_sites), function(i) {
-
-    message(paste0("Plotting: Reservoir Reusable water - ", res_reuse_storage_qm_sites[i]))
-
-    # extract dataframe
-    extract_df <-
-      res_reuse_storage_qm %>%
-      dplyr::filter(Group == res_reuse_storage_qm_sites[i]) %>%
-      dplyr::mutate(
-        qm = as.numeric(qm)
-      )
-
-    # refactor levels
-    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
-
-    extract_df <-
-      extract_df %>%
-      dplyr::mutate(
-        Type = factor(Type, levels = lvls)
-      )
-
-    # Horizontal line y intercept point
-    storage_max <- unique(extract_df$storage_max)
-
-    res_reuse_qm_plot <-
-      make_res_reusable_water_plot(
-        df               = extract_df,
-        timescale        = "qm",
-        storage_max      = storage_max,
-        plot_title       = res_reuse_storage_sites[i],
-        compare_model_id = comp_mod_id,
-        title_size       = title_size,
-        xaxis_size       = xaxis_size
-      )
-    res_reuse_qm_plot
-
-  }) %>%
-    stats::setNames(c(res_reuse_storage_qm_sites))
-
-  # save plot 2E
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2f. Reusable Water in Reservoir - Average Quarter-Monthly Plot 2x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      res_reuse_stor_qm_lst[["NBC Reservoir"]],
-      res_reuse_stor_qm_lst[["Barker Reservoir"]],
-      res_reuse_stor_qm_lst[["Boulder Reservoir"]],
-      nrow   = 2,
-      top    = "2f. Reusable Water in Reservoir - Average Quarter-Monthly Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-
-  # **********************
-  # ---- Plot 2H + 2I ----
-  # **********************
-
-  reuse_res_content <-
-    outputs %>%
-    process_reusable_res_content(definition_df = definitions) %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(rev(scenario_name)))
-    )  %>%
-    dplyr::filter(model_run == scenario_name[2])
-
-  # unique sites
-  reuse_res_cont_sites <- unique(reuse_res_content$Group)
-# i = 6
-  # plot 2H and 2I, loop through each site and plot
-  reuse_res_cont_lst <- lapply(1:length(reuse_res_cont_sites), function(i) {
-
-    message(paste0("Plotting: Reservoir Reusable water - ", reuse_res_cont_sites[i]))
-
-    # extract dataframe
-    extract_df <-
-      reuse_res_content %>%
-      dplyr::filter(Group == reuse_res_cont_sites[i]) %>%
-      dplyr::mutate(
-        wyqm = as.Date(paste0(wyqm, "-01")),
-        qm = as.numeric(qm)
-      )
-
-    # refactor levels
-    lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
-
-    extract_df <-
-      extract_df %>%
-      dplyr::mutate(
-        Type = factor(Type, levels = lvls)
-      )
-
-    # Horizontal line y intercept point
-    storage_max <- unique(extract_df$storage_max)
-
-    res_reuse_cont_plot <-
-      make_res_reusable_water_plot(
-        df               = extract_df,
-        timescale        = "date",
-        storage_max      = storage_max,
-        plot_title       = reuse_res_cont_sites[i],
-        compare_model_id = comp_mod_id,
-        title_size       = title_size,
-        xaxis_size       = xaxis_size
-      )
-    res_reuse_cont_plot
-
-  }) %>%
-    stats::setNames(c(reuse_res_cont_sites))
-
-  # save plot 2F 2I
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2h. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot 2x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      reuse_res_cont_lst[["NBC Reservoir"]],
-      reuse_res_cont_lst[["Barker Reservoir"]],
-      reuse_res_cont_lst[["Boulder Reservoir"]],
-      reuse_res_cont_lst[["Wittemyer"]],
-      reuse_res_cont_lst[["Panama"]],
-      nrow   = 5,
-      top    = "2h. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # save plot 2F 2I
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2i. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot 1x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      reuse_res_cont_lst[["All 5 Reservoirs"]],
-      nrow   = 1,
-      top    = "2i. Reusable Water in Reservoir - Quarter-Monthly Time Series Plot",
-      right  = "",
-      bottom = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 2J ----
-  # *****************
-  # new WG in out
-
-  # CBT Windygap process
-  cbt_wg <-
-    outputs %>%
-    process_cbt_windygap() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # sites to loop over and plot
-  cbt_wg_sites <- unique(cbt_wg$name)
-
-  # plot 2AB, loop through each site and plot
-  cbt_wg_lst <- lapply(1:length(cbt_wg_sites), function(i) {
-
-    extract_df <-
-      cbt_wg %>%
-      dplyr::filter(name == cbt_wg_sites[i])
-
-    message(paste0("Plotting: CBT Windygap - ", cbt_wg_sites[i]))
-
-    cbt_wg_plot <-
-      make_cbt_windygap_plot(
-        df         = extract_df,
-        site       = cbt_wg_sites[i],
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-
-    cbt_wg_plot
-
-  }) %>%
-    stats::setNames(c(cbt_wg_sites))
-
-  # save plot 2J
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2j. Boulder Reservoir Inflow Outflow - Time Series Plot 5x2.png"),
-    width    = 14,
-    height   = 8,
-      gridExtra::grid.arrange(
-        cbt_wg_lst[["Decree_75_Flow"]],
-        cbt_wg_lst[["Link_499_Flow"]],
-        cbt_wg_lst[["Link_451_Flow"]],
-        cbt_wg_lst[["Link_452_Flow"]],
-        cbt_wg_lst[["Link_375_Flow"]],
-        cbt_wg_lst[["Link_457_Flow"]],
-        cbt_wg_lst[["Link_454_Flow"]],
-        cbt_wg_lst[["DataObject_29_Flow"]],
-        cbt_wg_lst[["DataObject_1_Flow"]],
-        cbt_wg_lst[["DataObject_2_Flow"]],
-        nrow   = 5,
-        top    = "2j. Boulder Reservoir Inflow Outflow - Time Series Plot",
-        right  = ""
-      )
-  )
-
-  # *****************
-  # ---- Plot 2K ----
-  # *****************
-
-  # CBT WG Boulder Res qm output
-  cbt_wg_boulder <-
-    outputs %>%
-    process_wg_boulder(definitions_df = definitions) %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # max value for yaxis of plots
-  ymax <- round_by(x = max(cbt_wg_boulder$output), by = 500, buffer = 500)
-
-  # unique sites to plot over
-  cbt_wg_boulder_sites <- unique(cbt_wg_boulder$name)
-
-  # plot 2K, loop through each site and plot
-  cbt_wg_boulder_lst <- lapply(1:length(cbt_wg_boulder_sites), function(i) {
-
-    extract_df <-
-      cbt_wg_boulder %>%
-      dplyr::filter(name == cbt_wg_boulder_sites[i])
-
-    message(paste0("Plotting: WG Boulder Res - ", cbt_wg_boulder_sites[i]))
-
-    wg_boulder_plot <-
-      make_wg_boulder_plot(
-        df         = extract_df,
-        site       = cbt_wg_boulder_sites[i],
-        desc       = unique(extract_df$description)[1],
-        ymax       = ymax,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    wg_boulder_plot
-
-  }) %>%
-    stats::setNames(c(cbt_wg_boulder_sites))
-
-  # save plot 2K
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2k. Boulder Res QM - Time Series Plot 3x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      cbt_wg_boulder_lst[["DataObject_1_Flow"]],
-      cbt_wg_boulder_lst[["DataObject_29_Flow"]],
-      cbt_wg_boulder_lst[["DataObject_1_Flow + DataObject_29_Flow"]],
-      nrow   = 3,
-      top    = "2k. Boulder Res QM - Time Series Plot",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 2L ----
-  # *****************
-
-  # CBT Boulder Res qm output 2l
-
-  # process data for plot 2L
-  boulder_res <-
-    outputs %>%
-    process_boulder_res(definitions_df = definitions) %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # max value for yaxis of plots
-  ymax <- round_by(x = max(boulder_res$output), by = 500, buffer = 0)
-
-  # unique sites to plot over
-  boulder_res_sites <- unique(boulder_res$name)
-
-  # plot 2L, loop through each site and plot
-  boulder_res_lst <- lapply(1:length(boulder_res_sites), function(i) {
-
-    extract_df <-
-      boulder_res %>%
-      dplyr::filter(name == boulder_res_sites[i])
-
-    message(paste0("Plotting: CBT Boulder Res QM - ", boulder_res_sites[i]))
-
-    boulder_res_plot <-
-      make_boulder_res_plot(
-        df         = extract_df,
-        site       = boulder_res_sites[i],
-        desc       = unique(extract_df$description)[1],
-        ymax       = ymax,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    boulder_res_plot
-
-  }) %>%
-    stats::setNames(c(boulder_res_sites))
-
-  # save plot 2L
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "2l. Boulder Reservoir QM Contents - COB & Nortern 3x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      boulder_res_lst[["DataObject_1_Flow + DataObject_29_Flow"]],
-      boulder_res_lst[["DataObject_2_Flow"]],
-      boulder_res_lst[["Reservoir_12_Content"]],
-      nrow   = 3,
-      top    = "2l. Boulder Reservoir QM Contents - COB & Nortern",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 3A ----
-  # *****************
-
-  wittemyer_sources <-
-    outputs %>%
-    process_wg_wittemyer_source() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # unique model runs to plot
-  runs_lst <- unique(wittemyer_sources$model_run)
-
-  # plot 3A, loop through each site and plot
-  wittemyer_sources_lst <- lapply(1:length(runs_lst), function(i) {
-
-    extract_df <-
-      wittemyer_sources %>%
-      dplyr::filter(model_run == runs_lst[i])
-
-    message(paste0("Plotting: WG Wittemyer by source (Model run: ", runs_lst[i]), ")")
-
-    wittemyer_sources_plot <-
-      make_wittemyer_sources_plot(
-        df         = extract_df,
-        mod_run    = runs_lst[i],
-        ymax       = 3000,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    wittemyer_sources_plot
-
-  }) %>%
-    stats::setNames(c(runs_lst))
-
-  # save plot 3A
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "3a. Wittemyer Pond Total Annual Inflow by Source 1x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      wittemyer_sources_lst[[2]],
-      wittemyer_sources_lst[[1]],
-      nrow   = 2,
-      top    = "3a. Wittemyer Pond Total Annual Inflow by Source",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 3B ----
-  # *****************
-
-  wittemyer_ts <-
-    outputs %>%
-    process_wg_wittemyer_ts() %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-      )
-
-  # unique model runs to plot
-  witt_ts_sites <- unique(wittemyer_ts$name)
-
-  # plot 3B, loop through each site and plot
-  wittemyer_ts_lst <- lapply(1:length(witt_ts_sites), function(i) {
-
-    extract_df <-
-      wittemyer_ts %>%
-      dplyr::filter(name == witt_ts_sites[i])
-
-    message(paste0("Plotting: WG Wittemyer flow timeseries - ", witt_ts_sites[i]))
-
-    wittemyer_ts <-
-      make_wittemyer_ts_plot(
-        df         = extract_df,
-        site       = unique(extract_df$title)[1],
-        ymax       = 5000,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    wittemyer_ts
-
-  }) %>%
-    stats::setNames(c(witt_ts_sites))
-
-  # save plot 3B
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "3b. Wittemyer Pond Total Annual Flow Time Series 3x2.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      wittemyer_ts_lst[["BoulderWWTPTreatedReuseWater"]],
-      wittemyer_ts_lst[["WittemyerRecaptureWWTPReuse"]],
-      wittemyer_ts_lst[["WittemyerRecaptureGREP"]],
-      wittemyer_ts_lst[["WittemyerFirstFillRight"]],
-      wittemyer_ts_lst[["WittTotalInflow"]],
-      wittemyer_ts_lst[["WittReleases"]],
-      nrow   = 3,
-      top    = "3b. Wittemyer Pond Total Annual Flow Time Series",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 3C ----
-  # *****************
-
-  # annual wittemyer contents (year)
-  wittemyer_cont_yr <-
-    outputs %>%
-    process_wg_wittemyer_content(timescale = "year") %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # monthly wittemyer contents (qm)
-  wittemyer_pond_qm <-
-    outputs %>%
-    process_wg_wittemyer_content(timescale = "qm") %>%
-    dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
-
-  # unique sites
-  witt_cont_yr_sites <- unique(wittemyer_cont_yr$name)
-
-  # plot 3C, loop through each site and plot
-  wittemyer_cont_yr_lst <- lapply(1:length(witt_cont_yr_sites), function(i) {
-
-    extract_df <-
-      wittemyer_cont_yr %>%
-      dplyr::filter(name == witt_cont_yr_sites[i])
-
-    message(paste0("Plotting: WG Wittemyer Annual content - ", witt_cont_yr_sites[i]))
-
-    # annual wittemyer contents (year)
-    wittemyer_cont_plot <-
-      make_wittemyer_ts_plot(
-        df         = extract_df,
-        site       = unique(extract_df$title)[1],
-        ymax       = 2000,
-        title_size = title_size,
-        xaxis_size = xaxis_size,
-        timescale  = "year"
-      )
-
-    wittemyer_cont_plot
-
-  }) %>%
-    stats::setNames(c(witt_cont_yr_sites))
-
-  # monthly wittemyer contents plot (qm)
-  wittemyer_cont_qm_plot <- make_wittemyer_ts_plot(
-                                  df         = wittemyer_pond_qm,
-                                  site       = unique(wittemyer_pond_qm$title)[1],
-                                  ymax       = 2000,
-                                  title_size = title_size,
-                                  xaxis_size = xaxis_size,
-                                  timescale  = "qm"
-                                )
-
-  # add average monthly (qm) content plot to list of other wittemyer content plots
-  wittemyer_cont_yr_lst$Witt_monthly_avg_contents <- wittemyer_cont_qm_plot
-
-  # save plot 3C
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "3c. Wittemyer Pond Average Annual Contents 3x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      wittemyer_cont_yr_lst[["Witt_annual_max_contents"]],
-      wittemyer_cont_yr_lst[["Witt_annual_avg_contents"]],
-      wittemyer_cont_yr_lst[["Witt_monthly_avg_contents"]],
-      nrow   = 3,
-      top    = "3c. Wittemyer Pond Average Annual Contents",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 3D ----
-  # *****************
-
-  # Wittemyer Qm Time Series
-
-  witt_qm_ts <-
-    outputs %>%
-    process_wittemyer_qm_ts(
-      mod_run = scenario_name[1]
+    .$path
+
+  comp_file <-
+    model_dirs %>%
+    dplyr::filter(
+      # grepl("0001.DRRP_DroughtPlan_2020_055ac_CC_ID2_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID3_Base|0001.DRRP_DroughtPlan_2020_055ac_CC_ID5_Base", file),
+      grepl(comp_name, file),
+      output == "OutputSheet"
     ) %>%
+    # dplyr::group_by(extra_info) %>%
+    dplyr::group_by(model_version, model_id, model_num) %>%
+    dplyr::slice(1) %>%
+    dplyr::ungroup() %>%
     dplyr::mutate(
-      model_run = factor(model_run, levels = c(scenario_name))
-    )
+      prefix = substr(file, 1, 4)
+    ) %>%
+    .$file
+
+
+# base model extra txt column
+base_extra_txt <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl(base_name, file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  .$extra_info
+base_extra_txt
+# base_extra_txt <- "CC"
+
+# Comp model extra txt column
+comp_extra_txt <-
+  model_dirs %>%
+  dplyr::filter(
+    grepl(comp_name, file),
+    output == "OutputSheet"
+  ) %>%
+  dplyr::group_by(model_version, model_id, model_num) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  .$extra_info
+
+path_lst <- c(base_path, comp_path)
+n_file_prefix <- length(c(base_path, comp_path))
+comp_extra_txt
+# comp_extra_txt <- "8500NoBorrow4.5mgd"
 
-  # unique sites
-  witt_qm_sites <- unique(witt_qm_ts$name)
-
-  # plot 3D, loop through each site and plot
-  witt_qm_ts_lst <- lapply(1:length(witt_qm_sites), function(i) {
-
-    extract_df <-
-      witt_qm_ts %>%
-      dplyr::filter(name == witt_qm_sites[i])
-
-    message(paste0("Plotting: WG Wittemyer QM Timeseries - ", witt_qm_sites[i]))
-
-    # annual wittemyer contents (year)
-    witt_qm_ts_plot <-
-      make_wittemyer_date_plot(
-        df         = extract_df,
-        site       = unique(extract_df$title)[1],
-        ymax       = 2000,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    witt_qm_ts_plot
-
-  }) %>%
-    stats::setNames(c(witt_qm_sites))
-
-  # save plot 3D
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "3d. Wittemyer Pond Quarter-Monthly Time Series Plot 5x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      witt_qm_ts_lst[["Reservoir_13_Content"]],
-      witt_qm_ts_lst[["DataObject_27_Flow"]],
-      witt_qm_ts_lst[["Link_524_Flow"]],
-      witt_qm_ts_lst[["Link_592_Flow"]],
-      witt_qm_ts_lst[["Decree_106_Flow"]],
-      nrow   = 5,
-      top    = "3d. Wittemyer Pond Quarter-Monthly Time Series Plot",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 4A ----
-  # *****************
-
-  # Panama Reservoir Water Type Bar Plot
-
-  res_water_type <-
-    outputs %>%
-    process_res_water_type(
-      definitions_df = definitions,
-      qm_filter      = 24
-      )
-
-  # unique model runs to plot
-  runs_lst <- unique(res_water_type$model_run)
-
-  # plot 4A, loop through each site and plot
-  res_water_type_lst <- lapply(1:length(runs_lst), function(i) {
-
-    extract_df <-
-      res_water_type %>%
-      dplyr::filter(Type == "Inflow", model_run == runs_lst[i])
-
-    message(paste0("Plotting: Panama Reservoir Inflows by year (Model run: ", runs_lst[i]), ")")
-
-    res_water_type_plot <-
-      make_res_water_type_plot(
-        df         = extract_df,
-        mod_run    = runs_lst[i],
-        ymax       = 6000,
-        title_size = title_size,
-        xaxis_size = xaxis_size
-      )
-
-    res_water_type_plot
-
-  }) %>%
-    stats::setNames(c(runs_lst))
-
-  # save plot 3D
-  ggplot2::ggsave(
-    filename = paste0(model_comp_dir, "/", "4a. Panama Reservoir Inflow Water Type 2x1.png"),
-    width    = 14,
-    height   = 8,
-    gridExtra::grid.arrange(
-      res_water_type_lst[[2]],
-      res_water_type_lst[[1]],
-      nrow   = 2,
-      top    = "4a. Panama Reservoir Inflow Water Type",
-      right  = ""
-    )
-  )
-
-  # *****************
-  # ---- Plot 4B ----
-  # *****************
-
-  # *****************
-  # ---- Plot 4C ----
-  # *****************
-
-  # *****************
-  # ---- Plot 4D ----
-  # *****************
-
-  # ***************
-  # ---- Plot  ----
-  # ***************
-  drought_plot_name = "Drought Response Level"
-
-
-  extract_df <-
-    drought_index %>%
-    dplyr::filter(title == drought_plot_name) %>%
-    dplyr::rename("Model run" = model_run)
-
-
-
-  ylab <- unique(extract_df$ylabs)
-
-  if(drought_plot_name == "Drought Response Level") {
-    make_drought_response_plot(
-      df = extract_df,
-      plot_name =
-    )
-  }
-
-
-  drought_index %>%
-    dplyr::filter(title == drought_plot_lst[1])
-  drought_plot_lst
-
-  ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                   color = "ModelRun", linetype = "ModelRun")) +
-    geom_line() + #col = color_list[i]
-    geom_hline(yintercept = 0.40, linetype="solid", color="red") +
-    geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
-    geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
-    geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
-    #geom_hline(yintercept = 1.0, linetype="solid", color="black") +
-    theme_bw() +
-    ylim(0, y_axis_max_list[i]) +
-    ylab(ylab_list[i]) +
-    xlab("Water Year") +
-    ggtitle(title_list[i]) +
-    theme(plot.title = element_text(size = title_size),
-          axis.title = element_text(size = xaxis_size))
-  #p[[i]]
-
-
-
-    p_drought_triggers <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                                           color = "ModelRun", linetype = "ModelRun")) +
-      geom_line() + #col = color_list[i]
-      theme_bw() +
-      ylim(0, y_axis_max_list[i]) +
-      ylab(ylab_list[i]) +
-      xlab("Water Year") +
-      ggtitle(title_list[i]) +
-      theme(plot.title = element_text(size = title_size),
-            axis.title = element_text(size = xaxis_size),
-            panel.grid.minor.y = element_blank())
-
-
-    # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
-    p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                               color = "ModelRun", linetype = "ModelRun")) +
-      geom_line() + #col = color_list[i]
-      geom_hline(yintercept = storage_max_list[i], color = "black", size = 0.25) +
-      theme_bw() +
-      ylim(0, y_axis_max_list[i]) +
-      ylab(ylab_list[i]) +
-      xlab("Water Year") +
-      ggtitle(title_list[i]) +
-      theme(plot.title = element_text(size = title_size),
-            axis.title = element_text(size = xaxis_size))
-
-  drought_index$model_run
-  # May 1 Annual PSI and Reservoir Storage Plots (1a) --------------------------------------------------------
-
-  drought_index
-
-  drought_index_list <- list()
-
-  for (i in 1:n_file_prefix){
-
-    drought_index_list[[i]] <- data_list[[i]] %>%
-      # drought index is set May 1 each year (model sets in QM 29)
-      filter(qm == 29) %>%
-      # DataObject 15 = PSI/DRI drought index,
-      # Dataobject 12 = Drought Trigger Level,
-      # Res 3 = barker reservoir storage,
-      # Res 1 = watershed res storage,
-      # DataObject 1 = COB's share of Boulder res contents,
-      # Res 12 = Total Boulder Res Contents
-      select(year, qm, Date, ModelRun, DataObject_15_Flow, DataObject_12_Flow, Reservoir_3_Content,
-             Reservoir_1_Content, DataObject_1_Flow, Reservoir_12_Content,
-             DataObject_13_Flow) %>%
-      mutate(PSI = DataObject_15_Flow/100) %>%
-      rename(DroughtResponseLevel = DataObject_12_Flow) %>%
-      rename(Barker_Res_Contents_af = Reservoir_3_Content) %>%
-      rename(NBC_Res_Contents_af = Reservoir_1_Content) %>%
-      rename(Boulder_Res_Contents_af = DataObject_1_Flow) %>%
-      rename(TotalBoulder_Res_Contents_af = Reservoir_12_Content) %>%
-      mutate(Upper_Storage_af = rowSums(across(c(Barker_Res_Contents_af, NBC_Res_Contents_af)))) %>%
-      rename(Predicted_Storage_af = DataObject_13_Flow)
-    drought_index_list[[i]]
-
-  }
-
-  # merge the data from the loops together
-  drought_index <- bind_rows(drought_index_list[[1]], drought_index_list[[2]])
-
-  # Check the factor & levels for the 'ModelRun' column (we will plot by this)
-  # factor(drought_index$ModelRun)
-  # levels(drought_index$ModelRun)
-  # set the factor 'levels' to the correct plotting order
-  drought_index$ModelRun <-factor(drought_index$ModelRun, levels = scenario_name)
-  # Levels should be updated
-  levels(drought_index$ModelRun)
-
-
-  temp <- drought_index %>%
-    #select(year, qm, PSI) %>%
-    filter(year >= 2000 & year <= 2008)
-
-  ### Make the DRI & Reservoir Contents Time Series Plots ###
-
-  site_list <- c("PSI", "DroughtResponseLevel", "Barker_Res_Contents_af",
-                 "NBC_Res_Contents_af", "Upper_Storage_af", "Boulder_Res_Contents_af")
-  title_list <- c("Projected Storage Index","Drought Response Level",
-                  "Barker Reservoir Contents", "NBC Reservoir Contents",
-                  "Total Upper Reservoir Contents", "COB Boulder Reservoir Contents")
-  n_site_list <- length(site_list)
-  y_axis_max_list <- c(2.5, 5, 13000, 8000, 20000, 7000)
-  #color_list <- c("black", "#4169E1", "#4169E1", "#4169E1")
-  ylab_list <- c("PSI", "Drought Response Level", "Reservoir Contents (af)",
-                 "Reservoir Contents (af)", "Reservoir Contents (af)", "Reservoir Contents (af)")
-  storage_max_list <- c(NA, NA, 11277, 6927, 18204) #NBC Res, Barker Res, Boulder Res (summer storage)
-
-
-  p <- list()
-  p_drought_triggers <- list()
-  for (i in 1:n_site_list){
-
-    if (i == 1){
-
-      p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                                 color = "ModelRun", linetype = "ModelRun")) +
-        geom_line() + #col = color_list[i]
-        geom_hline(yintercept = 0.40, linetype="solid", color="red") +
-        geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
-        geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
-        geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
-        #geom_hline(yintercept = 1.0, linetype="solid", color="black") +
-        theme_bw() +
-        ylim(0, y_axis_max_list[i]) +
-        ylab(ylab_list[i]) +
-        xlab("Water Year") +
-        ggtitle(title_list[i]) +
-        theme(plot.title = element_text(size = title_size),
-              axis.title = element_text(size = xaxis_size))
-      #p[[i]]
-
-    } else if(i == 2){
-
-      p_drought_triggers <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                                             color = "ModelRun", linetype = "ModelRun")) +
-        geom_line() + #col = color_list[i]
-        theme_bw() +
-        ylim(0, y_axis_max_list[i]) +
-        ylab(ylab_list[i]) +
-        xlab("Water Year") +
-        ggtitle(title_list[i]) +
-        theme(plot.title = element_text(size = title_size),
-              axis.title = element_text(size = xaxis_size),
-              panel.grid.minor.y = element_blank())
-
-    } else {
-
-      # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
-      p[[i]] <- ggplot(drought_index, aes_string(x = "year", y = site_list[i],
-                                                 color = "ModelRun", linetype = "ModelRun")) +
-        geom_line() + #col = color_list[i]
-        geom_hline(yintercept = storage_max_list[i], color = "black", size = 0.25) +
-        theme_bw() +
-        ylim(0, y_axis_max_list[i]) +
-        ylab(ylab_list[i]) +
-        xlab("Water Year") +
-        ggtitle(title_list[i]) +
-        theme(plot.title = element_text(size = title_size),
-              axis.title = element_text(size = xaxis_size))
-      #p[[i]]
-
-    }
-
-
-  }
-
-  # define the plot name
-  plot_title <- "1a. May 1 Annual Reservoir Contents - Time Series Plot"
-  file_name <- paste(plot_title, " 3x2 ", sep = "")
-
-  # save the plot
-  ggsave(
-    filename = paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
-                     output_folder, device_type, sep = ""),
-    width = 14, height = 8,
-    grid.arrange(p[[1]], p_drought_triggers, p[[3]], p[[4]], p[[5]], tbl_temp2, nrow = 3,
-                 top = plot_title,
-                 right = "", bottom = ""))
-  # For Plot 1a
-  data_annual[132:136, 11:12]
-  # DataObject 15 = PSI/DRI drought index,
-  # Dataobject 12 = Drought Trigger Level,
-
-  # select the sites you want to plot
-  site_selection <- c("year", "qm", "Date", "ModelRun", "DataObject_12_Flow")
-  n_site_selection <- length(site_selection)
-
-  data_annual_list <- list()
-  # import the two scenarios to compare
-  for (i in 1:n_file_prefix){
-
-    # read in the quarter-monthly CRAM model data
-    data_annual_list[[i]] <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputAnnualSummary.csv", sep = ""),
-                                      col_names = FALSE)
-
-  }
-  data_annual <- bind_rows(data_annual_list[[1]][132:136, 11:12],
-                           data_annual_list[[2]][132:136, 11:12]
-                           )
-  colnames(data_annual) <- c("DroughtResponse", "Count")
-  data_annual$Count <- as.numeric(data_annual$Count)
-  data_annual2 <- bind_cols(ModelRun = c(rep(scenario_name[1], 5),
-                                         rep(scenario_name[2], 5)),
-                            data_annual)
-
-  data_annual2$CityReliability <- rep(c(NA, NA, 1, 2, 3), 2)
-  data_annual2$ExceedancePercent = c(NA, NA,
-                                     sum(data_annual2$Count[2:3]),
-                                     data_annual2$Count[4],
-                                     data_annual2$Count[5],
-                                     NA, NA,
-                                     sum(data_annual2$Count[7:8]),
-                                     data_annual2$Count[9],
-                                     data_annual2$Count[10])
-  # calculate the percentiles
-  #data_annual2$Percent = data_annual2$RevisedCount/100
-  # data_annual2$Criteria = rep(c(NA, NA, 0.05, 0.01, 0.001),2)
-  data_annual2$Criteria = rep(c(NA, NA, 5, 1, 0.1),2)
-  data_annual2$PassFail = ifelse(data_annual2$ExceedancePercent > data_annual2$Criteria, "fail", "pass")
-  colnames(data_annual2) <- c("Model Run", "Drought Response", "Count of Triggers",
-                              "City Reliability", "Reliability Percent",
-                              "Reliability Criteria", "Pass/Fail")
-
-  # set up
-  drought.df <- data.frame(DroughtLevel = c(0, 1, 2, 3, 4))
-
-
-  # remove_rownames(extract)
-  # colnames(extract) <- c("ModelRun", "Drought Response", "Count", "Revised Count",
-  #                        "Adj Drought Response", "Precent", "Criteria", "Pass Fail")
-  size <- 0.65
-  size1 <- 0.65
-  tt <- ttheme_default(core = list(fg_params=list(cex = size)),
-                       colhead = list(fg_params=list(cex = size1)),
-                       rowhead = list(fg_params=list(cex = size)))
-
-  ### Table 2
-  tbl_temp2 <- tableGrob(data_annual2, theme = tt, rows = NULL)
-  # add box around the column headers
-  tbl_temp2 <- gtable_add_grob(tbl_temp2,
-                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                               t = 1, l = 1, r = ncol(tbl_temp2))
-  # add box around the first model run of data
-  tbl_temp2 <- gtable_add_grob(tbl_temp2,
-                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                               t = 2, b = nrow(tbl_temp2), l = 1, r = ncol(tbl_temp2))
-  # add box around the second model run of data
-  tbl_temp2 <- gtable_add_grob(tbl_temp2,
-                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                               t = 7, b = nrow(tbl_temp2), l = 1, r = ncol(tbl_temp2))
-
-  grid.draw(tbl_temp2)
-  # rename basic data components
-  # data_list[[i]] <-
-    # data %>%
-    # rename(year = Step...1) %>%
-    # rename(qm = Step...2) %>%
-    # rename(OpStep = Step...3) %>%
-    # mutate(wyqm = paste(year, qm, sep = '-')) %>%
-    # left_join(., qm_convert, by = "wyqm") %>%
-    # mutate(Date = mdy(Start.Date)) %>%
-    # mutate(ModelRun = scenario_name[i])
-  #p_quota
-  factor(quota$model_run, levels = c(scenario_name))
-  Quota_annual$ModelRun <-factor(Quota_annual$ModelRun, levels = c(scenario_name))
-  # Levels should be updated
-  levels(Quota_annual$ModelRun)
-
-  # for(i in 1:length(unique(model_id_subs))) {
-  #   model_id_subs
-  #
-  # }
-  # model_id_subs[1] == model_id_subs[2]
-  # if(  model_id_subs[1] == model_id_subs[2]) {
-  #   quota_a <-
-  #     quota %>%
-  #     dplyr::mutate(
-  #       model_run
-  #     )
-  # }
-  # convert to lower to match clean names
-  # model_ids <- tolower(model_ids)
-
-  # quota     <- readr::read_csv(
-  #   file           = quota_path,
-  #   col_names      = T,
-  #   show_col_types = FALSE
-  # ) %>%
-  #   janitor::clean_names() %>%
-  #   dplyr::select(year, dplyr::contains(model_ids)) %>%
-  #   dplyr::filter(
-  #     year >= 1915,
-  #     year <= 2014
-  #   ) %>%
-  #   tidyr::pivot_longer(
-  #     cols      = c(-year),
-  #     names_to  = "model_run",
-  #     values_to = "quota"
-  #   ) %>%
-  #   dplyr::arrange(model_run, year)
-  # get the model configuration we are analyzing
-  Quota_compare_year <- paste(compare_model_ID, compare_climate, sep = "")
-  Quota_base_year <- paste(base_model_ID, base_climate, sep = "")
-
-  quota_list <- c("Year", Quota_compare_year, Quota_base_year)
-  quota_list_scenarios <- quota_list[-1]
-
-  if(quota_list_scenarios[1] == quota_list_scenarios[2]){
-    # Get the CBT quota year type data (annual data from 1915-2014)
-    Quota_annual <- read_csv(paste(model_folder, "/", "CBT_Quota_Annual4.csv", sep = "")) %>%
-      # extract only the YearType for the model runs we're interested in
-      # use syms to convert a character vector to a symbol
-      # The big-bang operator !!! forces-splice a list of objects. The elements of the list
-      # are spliced in place, meaning that they each become one single argument (see R help ?'!!!").
-      select(!!!syms(quota_list)) %>%
-      filter(Year >= 1915 & Year <= 2014) %>%
-      # convert from 'wide' format to 'long' format so it can be plotted with ggplot2
-      pivot_longer(., cols = c(quota_list_scenarios[1]),
-                   names_to = "ModelRun", values_to = "Quota") %>%
-      arrange(ModelRun, Year)
-
-    Quota_annual_a <-
-      Quota_annual %>%
-      mutate(ModelRun = scenario_name[1])
-
-    Quota_annual_b <-
-      Quota_annual %>%
-      mutate(ModelRun = scenario_name[2])
-
-    Quota_annual_temp = rbind(Quota_annual_a, Quota_annual_b)
-    Quota_annual <- Quota_annual_temp
-
-
-    # fix the factors/levels
-    #Quota_annual$ModelRun <-factor(Quota_annual$ModelRun, levels = c(quota_list_scenarios[1]))
-    Quota_annual$ModelRun <-factor(Quota_annual$ModelRun, levels = c(scenario_name))
-    # Levels should be updated
-    levels(Quota_annual$ModelRun)
-
-    rm(Quota_annual_a, Quota_annual_b, Quota_annual_temp)
-
-  }else {
-
-    # Get the CBT quota year type data (annual data from 1915-2014)
-    Quota_annual <- read_csv(paste(model_folder, "/", "CBT_Quota_Annual4.csv", sep = "")) %>%
-      # extract only the YearType for the model runs we're interested in
-      # use syms to convert a character vector to a symbol
-      # The big-bang operator !!! forces-splice a list of objects. The elements of the list
-      # are spliced in place, meaning that they each become one single argument (see R help ?'!!!").
-      select(!!!syms(quota_list)) %>%
-      filter(Year >= 1915 & Year <= 2014) %>%
-      # convert from 'wide' format to 'long' format so it can be plotted with ggplot2
-      pivot_longer(., cols = c(quota_list_scenarios[1], quota_list_scenarios[2]),
-                   names_to = "ModelRun", values_to = "Quota") %>%
-      arrange(ModelRun, Year)
-
-
-    # Check the factor & levels for the 'ModelRun' column (we will plot by this)
-    # factor(Quota_annual$ModelRun)
-    # levels(Quota_annual$ModelRun)
-    # # set the factor 'levels' to the correct plotting order
-    Quota_annual$ModelRun <-factor(Quota_annual$ModelRun, levels = c(quota_list_scenarios))
-    # Levels should be updated
-
-    levels(Quota_annual$ModelRun)
-    # get size of dataset
-
-
-  }
-  # ISF year type data (qm data from 1915-2014)
-  isf_year_type <- read_csv(paste(model_folder, "/", "ISF_year_type3.csv", sep = "")) %>%
-    # remove unnecessary columns of data
-    select(-'WY-QM', -Cal.Year, -Month, -'QM start day', -'QM end day',
-           -Start.Date, -End.Date) %>%
-    # extract only the YearType for the model run we're interested in
-    # use syms to convert a character vector to a symbol
-    # The big-bang operator !!! forces-splice a list of objects. The elements of the list
-    # are spliced in place, meaning that they each become one single argument (see R help ?'!!!").
-    select(wyqm, DaysInQM, !!!syms(ISF_list))
-  scenario_name
-
-  scenario_name <- c(
-    paste(compare_climate, "-", compare_model_ID, "_8500_", compare_model_ID_suffix,
-          compare_model_version, "_", compare_model_ID_prefix, sep = ""),
-    paste(base_climate, "-", base_model_ID, "_3143_", base_model_version,
-          base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
-  file_prefix <- c(paste0(
-    # base_model_ID_prefix,
-    # "DRRP_DroughtPlan_2020_",
-    ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-           paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-    base_model_version_text, "_8500_",
-    compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
-    paste0(
-      # compare_model_ID_prefix,
-      # "DRRP_DroughtPlan_2020_",
-      ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-             paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-      compare_model_version_text, "_3143_",
-      base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
-  n_file_prefix <- length(file_prefix)
-  # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
-  #                          compare_model_version, "_", compare_model_ID_prefix, "_8500", sep = ""),
-  #                    paste(base_climate, "-", base_model_ID, "_",base_model_version,
-  #                          base_model_ID_suffix, "_", base_model_ID_prefix, "_3143", sep = ""))
-
-  scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_", compare_model_ID_suffix,
-                           compare_model_version, "_", compare_model_ID_prefix, sep = ""),
-                     paste(base_climate, "-", base_model_ID, "_3143_", base_model_version,
-                           base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
-  scenario_name
-  n_scenario_name <- length(scenario_name)
-
-
-  # Read in the ISF Data ----------------------------------------------------
-
-  # get the model configuration we are analyzing
-  ISF_compare_year <- paste(compare_model_ID, compare_climate, sep = "")
-  ISF_base_year <- paste(base_model_ID, base_climate, sep = "")
-  # ISF_compare_year <- paste(
-  #   gsub(paste0(comp_mod_size, "_"), "", compare_model_ID),
-  #   compare_climate, sep = "")
-  # ISF_base_year <- paste(
-  #   gsub(paste0(base_mod_size, "_"), "", base_model_ID),
-  #   base_climate, sep = "")
-  ISF_list <- c(ISF_compare_year, ISF_base_year)
-
-  # ISF year type data (qm data from 1915-2014)
-  isf_year_type <- read_csv(paste(model_folder, "/", "ISF_year_type3.csv", sep = "")) %>%
-    # remove unnecessary columns of data
-    select(-'WY-QM', -Cal.Year, -Month, -'QM start day', -'QM end day',
-           -Start.Date, -End.Date) %>%
-    # extract only the YearType for the model run we're interested in
-    # use syms to convert a character vector to a symbol
-    # The big-bang operator !!! forces-splice a list of objects. The elements of the list
-    # are spliced in place, meaning that they each become one single argument (see R help ?'!!!").
-    select(wyqm, DaysInQM, !!!syms(ISF_list))
-# output_folder <-
-
-# model_dirs %>%
-#   dplyr::filter(
-#     !model_id %in% c("ID1"),
-#     output == "OutputSheet"
-#   ) %>%
-#   dplyr::group_by(base_model_version, model_id, model_num) %>%
-#   dplyr::slice(1) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::filter(name != "Quota", model_num == "7525") %>%
-#   dplyr::mutate(
-#     prefix = substr(file, 1, 4)
-#   )
-# dplyr::select(base_model_version, model_id, model_num)
-
-# # retrieve loopup table from all Output sheets and keep the distinct rows (no duplicate definitions)
-# definitions <-  lapply(1:nrow(path_df), function(y) {
-#
-#    make_lookup(output_path = path_df$path[y])
-#
-#   }
-# ) %>%
-#   dplyr::bind_rows() %>%
-#   dplyr::distinct()
-# z <- 1
-# rm(z)# rm(i)
-# z <- 3
-# z <- 1
-# k=1
-comp_mod_size = "8500"
-base_mod_size = "3143"
 # z = 1
+# k = 1
+# base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+
+currwd               <- "D:/cob/latest/latest"
+# currwd = "C:/Users/angus/OneDrive/Desktop/cob/latest/latest"
+# currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+# currwd <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+# model_folder <- "G:/.shortcut-targets-by-id/1B8Jfl31Nww6VN-dRe1H6jov-ogkJhMBW/2022 Modeling/Model Runs/Boulder COB Account Size Runs/"
+
+# isf_path <- "D:/cob/latest/latest"
+model_folder <- "D:/cob/latest/latest"
+# model_folder = "C:/Users/angus/OneDrive/Desktop/cob/latest/latest"
+# model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+
+# z = 1
+# k = 1
+
 # iterate through base models
 for(z in 1:nrow(base_mods)) {
 
-
   # base folder path
-  base_folder          <- "D:/cob/latest/latest"
-
-  currwd               <- "D:/cob/latest/latest"
+  # base_folder          <- "D:/cob/latest/latest"
+  # base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
+  #
+  # # currwd               <- "D:/cob/latest/latest"
+  # currwd <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
 
   # message(paste0("Base model: ", z, "/", nrow(base_mods)))
 
- base_model_version        <-  paste0("v", base_mods$model_version[z])
+  model_version        <-  paste0("v", base_mods$model_version[z])
 
   base_model_ID        <- base_mods$model_id[z]
 
@@ -2050,7 +219,7 @@ for(z in 1:nrow(base_mods)) {
 
   # base_model_ID_prefix <- ""   # if this is not needed, keep blank ""
   base_model_ID_prefix <- base_mods$prefix[z]
-  # message(paste0("Base model ver: ",base_model_version,
+  # message(paste0("Base model ver: ", model_version,
   #                "\nBase model ID: ", base_model_ID,
   #                "\nBase model ID suffix: ", base_model_ID_suffix,
   #                "\nBase model climate: ", base_climate,
@@ -2058,13 +227,6 @@ for(z in 1:nrow(base_mods)) {
   #                )
   #         )
 
-  # base_model_ID <- "ID1"                # Leave as ID1 (always compare with base)
-  # base_model_ID_suffix <- ""        # if this is not needed, keep blank ""
-  # base_climate <- "7525"               # Base or 9010, 7525, Center
-  # base_model_ID_prefix <- ""
-  #base_model_version
-  # k  <- 6
-  # k = 1
   # iterate through comparison models
   for(k in 1:nrow(comp_mods)) {
 
@@ -2082,7 +244,7 @@ for(z in 1:nrow(base_mods)) {
     # compare_model_ID_prefix <- ""
     compare_model_ID_prefix <- comp_mods$prefix[k]
 
-    message(paste0("Base model ver: ",base_model_version,
+    message(paste0("Base model ver: ", model_version,
                    "\nBase model ID: ", base_model_ID,
                    "\nBase model ID suffix: ", base_model_ID_suffix,
                    "\nBase model climate: ", base_climate,
@@ -2097,7 +259,7 @@ for(z in 1:nrow(base_mods)) {
     )
     )
     ### User controlled data
-    #base_model_version <- c("v055a")
+    # model_version <- c("v055a")
 
     # base_model_ID <- "ID1"                # Leave as ID1 (always compare with base)
     # base_model_ID_suffix <- ""        # if this is not needed, keep blank ""
@@ -2117,7 +279,9 @@ for(z in 1:nrow(base_mods)) {
     xaxis_size = 9
 
     # model_folder <- "latest"
-    model_folder <- "D:/cob/latest/latest"
+    # model_folder <- "D:/cob/latest/latest"
+
+    # model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/model_files/latest/"
 
     device_type <- ".png"     # .png, .pdf
 
@@ -2127,12 +291,12 @@ for(z in 1:nrow(base_mods)) {
 
     output_folder <-
       paste0(
-        base_model_ID, "-", base_climate,  "-", gsub("v", "",base_model_version), "-", base_model_ID_prefix,
+        base_model_ID, "-", base_climate,  "-", gsub("v", "", model_version), "-", base_extra_txt,
         " vs ",
-        compare_model_ID, "-", compare_climate, "-", gsub("v", "", compare_model_version), "-", compare_model_ID_prefix
+        compare_model_ID, "-", compare_climate, "-", gsub("v", "", compare_model_version), "-", comp_extra_txt
       )
 
-    base_model_version_text <- substr(base_model_version, start = 2, stop = nchar(base_model_version))
+    model_version_text <- substr(model_version, start = 2, stop = nchar(model_version))
     compare_model_version_text <- substr(compare_model_version, start = 2, stop = nchar(compare_model_version))
 
     # model_dirs %>%
@@ -2140,12 +304,12 @@ for(z in 1:nrow(base_mods)) {
     #   !model_id %in% c("ID1"),
     #   output == "OutputSheet"
     # ) %>%
-    #   dplyr::group_by(base_model_version, model_id, model_num) %>%
+    #   dplyr::group_by(model_version, model_id, model_num) %>%
     #   dplyr::slice(1) %>%
     #   dplyr::ungroup() %>%
     #   dplyr::filter(name != "Quota", model_num == "7525") %>%
     #   .$file
-    # file_prefix <- c(paste0(base_model_ID_prefix, "DRRP_DroughtPlan_2020_",base_model_version_text, "_",
+    # file_prefix <- c(paste0(base_model_ID_prefix, "DRRP_DroughtPlan_2020_", model_version_text, "_",
     #                         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
     #                  paste0(compare_model_ID_prefix, "DRRP_DroughtPlan_2020_", compare_model_version_text, "_",
     #                         base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
@@ -2155,7 +319,7 @@ for(z in 1:nrow(base_mods)) {
     #                         # "DRRP_DroughtPlan_2020_",
     #                         ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
     #                                paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-    #                        base_model_version_text, "_",
+    #                         model_version_text, "_",
     #                         compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
     #                  paste0(
     #                    # compare_model_ID_prefix,
@@ -2165,30 +329,43 @@ for(z in 1:nrow(base_mods)) {
     #                         compare_model_version_text, "_",
     #                         base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
 
-    file_prefix <- c(paste0(
-      # base_model_ID_prefix,
-      # "DRRP_DroughtPlan_2020_",
-      ifelse(base_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-             paste0(base_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-     base_model_version_text, "_8500_",
-      compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""),
-      paste0(
-        # compare_model_ID_prefix,
-        # "DRRP_DroughtPlan_2020_",
-        ifelse(compare_model_ID_prefix == "DRRP", "DRRP_DroughtPlan_2020_",
-               paste0(compare_model_ID_prefix, ".DRRP_DroughtPlan_2020_")),
-        compare_model_version_text, "_3143_",
-        base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""))
-    n_file_prefix <- length(file_prefix)
+    # "_", base_extra_txt, "_",
+    # file_prefix <- c(paste0(
+    #   # base_model_ID_prefix,
+    #   # "DRRP_DroughtPlan_2020_",
+    #   ifelse(base_model_ID_prefix == "DRRP", "DRRP_WEP_2023_",
+    #          paste0(base_model_ID_prefix, ".DRRP_WEP_2023_")),
+    #   model_version_text,
+    #   ifelse(base_extra_txt == "", "_", paste0("_", base_extra_txt, "_")),
+    #   base_model_ID, base_model_ID_suffix, "_", base_climate, sep = ""),
+    #   paste0(
+    #     # compare_model_ID_prefix,
+    #     # "DRRP_DroughtPlan_2020_",
+    #     ifelse(compare_model_ID_prefix == "DRRP", "DRRP_WEP_2023_",
+    #            paste0(compare_model_ID_prefix, ".DRRP_WEP_2023_")),
+    #     compare_model_version_text,
+    #     ifelse(comp_extra_txt == "", "_", paste0("_", comp_extra_txt, "_")),
+    #     compare_model_ID, compare_model_ID_suffix, "_", compare_climate, sep = ""))
+    #
+    # n_file_prefix <- length(file_prefix)
+
     # scenario_name <- c(paste(compare_climate, "-", compare_model_ID, compare_model_ID_suffix, "_",
     #                          compare_model_version, "_", compare_model_ID_prefix, "_8500", sep = ""),
-    #                    paste(base_climate, "-", base_model_ID, "_",base_model_version,
+    #                    paste(base_climate, "-", base_model_ID, "_", model_version,
     #                          base_model_ID_suffix, "_", base_model_ID_prefix, "_3143", sep = ""))
 
-    scenario_name <- c(paste(compare_climate, "-", compare_model_ID, "_8500_", compare_model_ID_suffix,
-                             compare_model_version, "_", compare_model_ID_prefix, sep = ""),
-                       paste(base_climate, "-", base_model_ID, "_3143_", base_model_version,
-                             base_model_ID_suffix, "_", base_model_ID_prefix, sep = ""))
+    scenario_name <- c(
+      paste(base_climate, "-", base_model_ID,
+            # "_", base_extra_txt, "_",
+            ifelse(base_extra_txt == "", "_", paste0("_", base_extra_txt, "_")),
+            model_version,
+            base_model_ID_suffix, sep = ""),
+      paste(compare_climate, "-", compare_model_ID,
+            # "_", comp_extra_txt, "_",
+            ifelse(comp_extra_txt == "", "_", paste0("_", comp_extra_txt, "_")),
+            compare_model_ID_suffix,
+            compare_model_version,  sep = "")
+    )
     scenario_name
     n_scenario_name <- length(scenario_name)
 
@@ -2207,7 +384,7 @@ for(z in 1:nrow(base_mods)) {
     ISF_list <- c(ISF_compare_year, ISF_base_year)
 
     # ISF year type data (qm data from 1915-2014)
-    isf_year_type <- read_csv(paste(model_folder, "/", "ISF_year_type3.csv", sep = "")) %>%
+    ISF_year_type <- read_csv(paste(model_folder, "/", "ISF_year_type3.csv", sep = "")) %>%
       # remove unnecessary columns of data
       select(-'WY-QM', -Cal.Year, -Month, -'QM start day', -'QM end day',
              -Start.Date, -End.Date) %>%
@@ -2330,7 +507,10 @@ for(z in 1:nrow(base_mods)) {
       # read in the quarter-monthly CRAM model data
       # data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
       #                  col_names = FALSE)
-      data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+      # data <- read_csv(paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+      #                  col_names = FALSE)
+
+      data <- read_csv(paste(path_lst[i]),
                        col_names = FALSE)
 
       # get the column name & column descriptions
@@ -2339,8 +519,13 @@ for(z in 1:nrow(base_mods)) {
       column_descriptions <- data[3, ]
       # i =1
       # re-read in the quarter-monthly CRAM model data (skipping name rows at the top)
+      # data <- read_csv(
+      #   paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+      #   # col_names = F,
+      #   skip = 4)
+
       data <- read_csv(
-        paste(model_folder, "/", file_prefix[i], ".OutputSheet.csv", sep = ""),
+        paste(path_lst[i]),
         # col_names = F,
         skip = 4)
       data <- data[1:4800, ]
@@ -2414,10 +599,12 @@ for(z in 1:nrow(base_mods)) {
                              data_annual_list[[2]][132:136, 11:12])
     colnames(data_annual) <- c("DroughtResponse", "Count")
     data_annual$Count <- as.numeric(data_annual$Count)
-    data_annual2 <- bind_cols(ModelRun = c(rep(scenario_name[1], 5),
-                                           rep(scenario_name[2], 5)),
+    # data_annual2 <- bind_cols(ModelRun = c(rep(scenario_name[1], 5),
+    #                                        rep(scenario_name[2], 5)),
+    #                           data_annual)
+    data_annual2 <- bind_cols(ModelRun = c(gsub("_DRRP", "", rep(scenario_name[1], 5)),
+                                           gsub("_DRRP", "", rep(scenario_name[2], 5))),
                               data_annual)
-
     data_annual2$CityReliability <- rep(c(NA, NA, 1, 2, 3), 2)
     data_annual2$ExceedancePercent = c(NA, NA, sum(data_annual2$Count[2:3]),
                                        data_annual2$Count[4], data_annual2$Count[5],
@@ -2749,7 +936,7 @@ for(z in 1:nrow(base_mods)) {
     ggsave(
       filename = paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
                        output_folder, device_type, sep = ""),
-      width = 14, height = 8,
+      width = 16, height = 8,
       grid.arrange(p[[1]], p_drought_triggers, p[[3]], p[[4]], p[[5]], tbl_temp2, nrow = 3,
                    top = plot_title,
                    right = "", bottom = ""))
@@ -2763,7 +950,7 @@ for(z in 1:nrow(base_mods)) {
     #
     # # save the plot
     # ggsave(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
     #         output_folder, ".pdf", sep = ""),
     #   width = 14, height = 8,
     #   grid.arrange(tbl_temp2, tbl_temp3, nrow = 2,
@@ -2838,7 +1025,7 @@ for(z in 1:nrow(base_mods)) {
     # }
     #
     # ggsave(
-    #   paste(model_folder, "/May 1 Annual Reservoir Time Series with Boulder Res 3x2 ",base_model_version, ".png", sep = ""),
+    #   paste(model_folder, "/May 1 Annual Reservoir Time Series with Boulder Res 3x2 ", model_version, ".png", sep = ""),
     #   width = 14, height = 8,
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]], nrow = 3,
     #                top = "May 1 Annual Reservoir Time Series Plots",
@@ -2928,7 +1115,7 @@ for(z in 1:nrow(base_mods)) {
 
     # # save the plot w/display
     # ggsave(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
     #         output_folder, ".pdf", sep = ""),
     #   width = 14, height = 8,
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]],
@@ -2939,7 +1126,7 @@ for(z in 1:nrow(base_mods)) {
                            p[[5]], p[[6]], nrow = 3, top = plot_title, right = "", left = "", bottom = "")
 
     # save the plot without the display
-    ggsave(paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    ggsave(paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
                  output_folder, device_type, sep = ""),
            width = 14, height = 8, plot = p_final)
 
@@ -2974,14 +1161,13 @@ for(z in 1:nrow(base_mods)) {
     #
     # }
 
-
     # # define the plot name
     # plot_title <- "Annual Supply by Water Type - Time Series Plot"
     # file_name <- paste(plot_title, " 2x2 ", sep = "")
     #
     # # plot the data
     # ggsave(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
     #         output_folder, ".pdf", sep = ""),
     #   width = 14, height = 8,
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], nrow = 2,
@@ -3028,7 +1214,7 @@ for(z in 1:nrow(base_mods)) {
     #                right = ""))
 
     # ggsave(
-    #   paste(model_folder, "/Annual Demand met by Source with CBT Windy Gap Time Series 5x1 ",base_model_version, ".png", sep = ""),
+    #   paste(model_folder, "/Annual Demand met by Source with CBT Windy Gap Time Series 5x1 ", model_version, ".png", sep = ""),
     #   width = 10, height = 11,
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[5]], p[[6]], nrow =5,
     #                top = "Annual Demand met by Source Time Series Plot",
@@ -3112,7 +1298,7 @@ for(z in 1:nrow(base_mods)) {
 
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], nrow = 2,
@@ -3163,17 +1349,18 @@ for(z in 1:nrow(base_mods)) {
         # now, group data by Year & ModelRun to sum data annually
         group_by(year, ModelRun) %>%
         # sum the sources by year
-        summarize(CBT_Inflow = sum(Decree_75_Flow), WindyGap_Inflow = sum(Link_499_Flow),
-                  BoulderRes_WGtoCity = sum(BoulderResWGtoCity),
-                  SBC_ISF = sum(Link_350_Flow),
-                  BarkerRes_ReusableWater = max(DataObject_28_Flow),  #max storage by year
-                  NBCRes_ReusableWater = max(DataObject_30_Flow),     #max storage by year
-                  BoulderRes_ReusableWater = max(DataObject_29_Flow), #max storage by year
-                  BoulderRes_WGExchtoBarker = sum(DataObject_43_Flow),
-                  BoulderRes_WGExchtoNBCRes = sum(DataObject_42_Flow),
-                  BoulderRes_WGExctoUpperStor = sum(DataObject_41_Flow),
-                  NBCRes_Contents = mean(Reservoir_1_Content),
-                  COB_Reusable_Contents = max(ReuseStorage)
+        summarize(
+          CBT_Inflow = sum(Decree_75_Flow), WindyGap_Inflow = sum(Link_499_Flow),
+          BoulderRes_WGtoCity = sum(BoulderResWGtoCity),
+          SBC_ISF = sum(Link_350_Flow),
+          BarkerRes_ReusableWater = max(DataObject_28_Flow),  #max storage by year
+          NBCRes_ReusableWater = max(DataObject_30_Flow),     #max storage by year
+          BoulderRes_ReusableWater = max(DataObject_29_Flow), #max storage by year
+          BoulderRes_WGExchtoBarker = sum(DataObject_43_Flow),
+          BoulderRes_WGExchtoNBCRes = sum(DataObject_42_Flow),
+          BoulderRes_WGExctoUpperStor = sum(DataObject_41_Flow),
+          NBCRes_Contents = mean(Reservoir_1_Content),
+          COB_Reusable_Contents = max(ReuseStorage)
         )
       cbt_windygap_list[[i]]
 
@@ -3199,21 +1386,31 @@ for(z in 1:nrow(base_mods)) {
 
 
     ### Plot the annual time series ###
-    site_list <- c("CBT_Inflow", "WindyGap_Inflow",
-                   "BoulderRes_WGExchtoBarker", "BoulderRes_WGExchtoNBCRes",
-                   "BoulderRes_WGExctoUpperStor", "BoulderRes_WGtoCity",
-                   "SBC_ISF", "BarkerRes_ReusableWater", "NBCRes_ReusableWater",
-                   "BoulderRes_ReusableWater", "COB_Reusable_Contents")
-    title_list <- c("C-BT Inflow", "Windy Gap Inflow",
-                    "Boulder Reservoir: Windy Gap Exch. to Barker Res",
-                    "Boulder Reservoir: Windy Gap Exch. to NBC Res",
-                    "Boulder Reservoir: Windy Gap Total Exch to Upper Storage",
-                    "Boulder Reservoir: Windy Gap to City",
-                    "South Boulder Creek Instream Flow",
-                    "Barker Reservoir: Maximum Annual Reusable Water",
-                    "NBC Reservoir: Maximum Annual Reusable Water",
-                    "Boulder Reservoir: Maximum Annual Reusable Water",
-                    "Barker + NBC + Boulder: Maximum Annual Reusable Contents")
+    site_list <- c("CBT_Inflow",
+                   "WindyGap_Inflow",
+                   "BoulderRes_WGExchtoBarker",
+                   "BoulderRes_WGExchtoNBCRes",
+                   "BoulderRes_WGExctoUpperStor",
+                   "BoulderRes_WGtoCity",
+                   "SBC_ISF",
+                   "BarkerRes_ReusableWater",
+                   "NBCRes_ReusableWater",
+                   "BoulderRes_ReusableWater",
+                   "COB_Reusable_Contents"
+    )
+    title_list <- c(
+      "C-BT Inflow",
+      "Windy Gap Inflow",
+      "Boulder Reservoir: Windy Gap Exch. to Barker Res",
+      "Boulder Reservoir: Windy Gap Exch. to NBC Res",
+      "Boulder Reservoir: Windy Gap Total Exch to Upper Storage",
+      "Boulder Reservoir: Windy Gap to City",
+      "South Boulder Creek Instream Flow",
+      "Barker Reservoir: Maximum Annual Reusable Water",
+      "NBC Reservoir: Maximum Annual Reusable Water",
+      "Boulder Reservoir: Maximum Annual Reusable Water",
+      "Barker + NBC + Boulder: Maximum Annual Reusable Contents"
+    )
     n_site_list <- length(site_list)
     y_axis_max_list <- c(18000, 18000, 4000, 4000, 4000, 3500, 50000, 12000, 12000, 12000, 20000)
     y_lab_list <- c(rep("Flow (af)", 7), rep("Contents (af)", 4))
@@ -3260,7 +1457,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p_quota, p[[2]], p[[3]], p[[4]], p[[5]], nrow = 3,
@@ -3274,7 +1471,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 3x2 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[2]], p[[5]], p[[8]], p[[9]], p[[10]], p[[11]], nrow = 3,
@@ -3286,14 +1483,14 @@ for(z in 1:nrow(base_mods)) {
        y_lab_list, site_list, title_list, n_site_list, p, plot_title, file_name)
 
     # ggsave(
-    #   paste("Annual CBT-Windy Gap Exchange Time Series 4x2 ",base_model_version, ".png", sep = ""),
+    #   paste("Annual CBT-Windy Gap Exchange Time Series 4x2 ", model_version, ".png", sep = ""),
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]],
     #                p[[7]], p[[8]],  nrow =4,
     #                top = "Annual Demand met by Source Time Series Plot",
     #                right = ""))
 
     # ggsave(
-    #   paste("CBT-Windy Gap Exchange Annual Total Time Series 5x2 ",base_model_version, ".png", sep = ""),
+    #   paste("CBT-Windy Gap Exchange Annual Total Time Series 5x2 ", model_version, ".png", sep = ""),
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]],
     #                p[[7]], p[[8]], p[[9]], p[[10]], nrow = 5,
     #                top = "CBT-Windy Gap Exchange Annual Total Time Series Plot",
@@ -3302,45 +1499,48 @@ for(z in 1:nrow(base_mods)) {
 
 
     # CBT Quota Tabulation ----------------------------------------------------
+    # CBT Quota Tabulation - New Advanced Quota (2a, 2ab, 2ac) -------------------------------
 
-    # select the sites you want to plot
-    site_selection <- c("year", "qm", "Month", "Date", "ModelRun", "Decree_75_Content", "Decree_75_Flow",
-                        "DataObject_39_Flow", "DataObject_3_Flow", "DataObject_44_Flow")
-    n_site_selection <- length(site_selection)
-    site_start_no <- 6
-    site_selection_short <- site_selection[site_start_no:n_site_selection]
-    n_site_selection_short <- length(site_selection_short)
+    # DO14 = cbt quota (set in qm 25)
+
+    # cbt quota is now set once in November (qm 5) with an initial quota
+    # then the final quota is set in April 1 (qm 25)
+    # the quota had 3 parts now: qms 5-24, qms 25-48, and qms 1-4 of the next year
+    # the quota then resets on qm 5 for the new year
 
 
-    # Get the half of the annual CBT water (Decree 75)
+
+    # Get the half of the annual CBT water (Decree 75) (QM 5-24)
     ### cbt use extract decree 75 for QM's 1-24, which are off by 1 year from CBT accounting (decree 75 resets to 0 at QM25)
-    cbt_dec_75_QM1_24_list <- list()
+    cbt_dec_75_QM5_24_list <- list()
     for (i in 1:n_file_prefix){
 
-      cbt_dec_75_QM1_24_list[[i]] <- data_list[[i]] %>%
+      cbt_dec_75_QM5_24_list[[i]] <- data_list[[i]] %>%
         # select the columns of interest
         select(year, qm, ModelRun, Decree_75_Flow) %>%
         # get the Boulder CBT capacity QMs 1-24, Oct-Mar, before the decree is reset on April 1 (qm 25)
         # (the CBT decree capacity resets to 0 in model on QM 25)
-        filter(qm <= 24) %>%
+        filter(qm >= 5 & qm <= 24) %>%
         # group by year and then sum the flow by year, so sum QMs 1-24
         group_by(year, ModelRun) %>%
-        summarise(Decree75_QM1_24 = sum(Decree_75_Flow)) %>%
-        # make a new column that offsets the year by 1 to reflect when that water was actually used
-        # to align with the CBT quota which resets this Decree 75 on QM 25
-        mutate(cbt_year_taken = year - 1)
+        summarise(Decree75_QM5_24 = sum(Decree_75_Flow))
+      #%>%
+      # make a new column that offsets the year by 1 to reflect when that water was actually used
+      # to align with the CBT quota which resets this Decree 75 on QM 25
+      #mutate(cbt_year_taken = year - 1)
 
     }
-    cbt_dec_75_QM1_24 <- bind_rows(cbt_dec_75_QM1_24_list[[1]], cbt_dec_75_QM1_24_list[[2]]) %>%
+    cbt_dec_75_QM5_24 <- bind_rows(cbt_dec_75_QM5_24_list[[1]], cbt_dec_75_QM5_24_list[[2]]) %>%
       # order output by modelID then year (to help with column binds later)
       ungroup() %>%
       arrange(ModelRun, year) %>%
-      filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2013) %>%
-      group_by(cbt_year_taken, ModelRun) %>%
-      select(-year) %>%
-      rename(year = cbt_year_taken)
+      #filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2014) %>%
+      # group_by(cbt_year_taken, ModelRun) %>%
+      group_by(year, ModelRun)
+    #select(-year) %>%
+    #rename(year = cbt_year_taken)
 
-    # Get the half of the annual CBT water (Decree 75)
+    # Get the other half of the annual CBT water (Decree 75)
     ### cbt use extract decree 75 for QM's 15-48 (these are NOT off by 1 year)
     cbt_dec_75_QM25_48_list <- list()
     for (i in 1:n_file_prefix){
@@ -3359,103 +1559,94 @@ for(z in 1:nrow(base_mods)) {
     }
     cbt_dec_75_QM25_48 <- bind_rows(cbt_dec_75_QM25_48_list[[1]], cbt_dec_75_QM25_48_list[[2]]) %>%
       # order output by modelID then year (to help with column binds later)
+      arrange(ModelRun, year)
+    #filter(year >= 1915 & year <= 2013)
+
+
+    # Get the half of the annual CBT water (Decree 75) (QM 5-24)
+    ### cbt use extract decree 75 for QM's 1-24, which are off by 1 year from CBT accounting (decree 75 resets to 0 at QM25)
+    cbt_dec_75_QM1_4_list <- list()
+    for (i in 1:n_file_prefix){
+
+      cbt_dec_75_QM1_4_list[[i]] <- data_list[[i]] %>%
+        # select the columns of interest
+        select(year, qm, ModelRun, Decree_75_Flow) %>%
+        # get the Boulder CBT capacity QMs 1-24, Oct-Mar, before the decree is reset on April 1 (qm 25)
+        # (the CBT decree capacity resets to 0 in model on QM 25)
+        filter(qm >= 1 & qm <= 4) %>%
+        # group by year and then sum the flow by year, so sum QMs 1-24
+        group_by(year, ModelRun) %>%
+        summarise(Decree75_QM1_4 = sum(Decree_75_Flow)) %>%
+        # make a new column that offsets the year by 1 to reflect when that water was actually used
+        # to align with the CBT quota which resets this Decree 75 on QM 25
+        mutate(cbt_year_taken = year - 1) %>%
+        ungroup()
+
+    }
+    # add 1 row for 'missing/future' data that is not in the model (outside the period of record) for 2014/2015
+    cbt_dec_75_QM1_4_list[[1]] <- add_row(cbt_dec_75_QM1_4_list[[1]],
+                                          year=2015, ModelRun=scenario_name[1], Decree75_QM1_4=0, cbt_year_taken=2014)
+    cbt_dec_75_QM1_4_list[[2]] <- add_row(cbt_dec_75_QM1_4_list[[2]],
+                                          year=2015, ModelRun=scenario_name[2], Decree75_QM1_4=0, cbt_year_taken=2014)
+
+
+    cbt_dec_75_QM1_4 <- bind_rows(cbt_dec_75_QM1_4_list[[1]], cbt_dec_75_QM1_4_list[[2]]) %>%
+      # order output by modelID then year (to help with column binds later)
+      ungroup() %>%
       arrange(ModelRun, year) %>%
-      filter(year >= 1915 & year <= 2013)
+      filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2014) %>%
+      group_by(cbt_year_taken, ModelRun) %>%
+      #group_by(year, ModelRun)
+      select(-year) %>%
+      rename(year = cbt_year_taken) %>%
+      relocate(year, .before = ModelRun)
 
-
-
-    ### run an annual analysis
-    extract_list1 <- list()
-    for (i in 1:n_file_prefix){
-
-      extract_list1[[i]] <- data_list[[i]] %>%
-        # select the columns of interest from the vector above using !!!syms to read it properly
-        select(year, qm, ModelRun, DataObject_3_Flow) %>%
-        # grab data from QM 24, which is when the max value is set, before it's cleared on QM 25.
-        filter(qm == 24) %>%
-        # remove last year to align with Decree 75 qm 24
-        filter(year >= 1915 & year <= 2013)
-      #group_by(year, ModelRun) %>%
-      # faster way to do this (but it doesn't adjust column names)
-      # get the annual cbt decree sum
-      #summarise(across(site_selection[site_start_no]:site_selection[n_site_selection], sum))
-
-    }
-
-    # merge the data from the loops together
-    annual_extract1 <- bind_rows(extract_list1[[1]], extract_list1[[2]]) %>%
-      group_by(ModelRun) %>%
-      rename(qm24 = qm) %>%
-      # order the data so it lines up with the other dataset
-      arrange(., ModelRun, year)
-
-
-    ### run an annual analysis part 2
-    extract_list2 <- list()
-    for (i in 1:n_file_prefix){
-
-      extract_list2[[i]] <- data_list[[i]] %>%
-        # select the columns of interest from the vector above using !!!syms to read it properly
-        select(year, qm, ModelRun, DataObject_39_Flow, DataObject_44_Flow) %>%
-        # grab data from QM 25, when these values are set.
-        filter(qm == 25) %>%
-        # remove last year to align with Decree 75 qm 24
-        filter(year >= 1915 & year <= 2013)
-      #group_by(year, ModelRun) %>%
-      # faster way to do this (but it doesn't adjust column names)
-      # get the annual cbt decree sum
-      #summarise(across(site_selection[site_start_no]:site_selection[n_site_selection], sum))
-
-    }
-
-    # merge the data from the loops together
-    annual_extract2 <- bind_rows(extract_list2[[1]], extract_list2[[2]]) %>%
-      group_by(ModelRun) %>%
-      rename(qm25 = qm) %>%
-      # order the data so it lines up with the other dataset
-      arrange(., ModelRun, year)
 
     # get the actual CBT quota
-    Quota_annual2 <- Quota_annual %>%
-      arrange(., ModelRun, Year) %>%
-      # remove last year to align with Decree 75 qm 24
-      filter(Year >= 1915 & Year <= 2013) %>%
-      mutate(ModelRun2 = c(rep(scenario_name[1], 99), rep(scenario_name[2], 99))) %>%
-      arrange(., ModelRun2, Year) %>%
-      mutate(COB_CBT_allotment = Quota * 21174)
+    Quota_annual_list <- list()
+    for (i in 1:n_file_prefix){
+      Quota_annual_list[[i]] <- data_list[[i]] %>%
+        select(year, qm, ModelRun, DataObject_14_Flow) %>%
+        filter(qm == 25) %>%
+        # remove last year to align with Decree 75 qm 24
+        #filter(Year >= 1915 & Year <= 2013) %>%
+        #mutate(ModelRun2 = c(rep(scenario_name[1], 100), rep(scenario_name[2], 100))) %>%
+        #arrange(., ModelRun2, Year) %>%
+        mutate(COB_CBT_allotment = (DataObject_14_Flow/100) * 21174)
 
-    # merge the two datasets together
-    annual_extract <- bind_cols(annual_extract1, annual_extract2) %>%
-      bind_cols(., Quota_annual2) %>%
-      bind_cols(., cbt_dec_75_QM1_24) %>%
-      bind_cols(., cbt_dec_75_QM25_48) %>%
-      select(year...1, ModelRun...3, DataObject_3_Flow, DataObject_44_Flow,
-             Decree75_QM1_24, Decree75_QM25_48, COB_CBT_allotment) %>%
-      rename(year = year...1, ModelRun = ModelRun...3) %>%
-      rowwise() %>% mutate(COB_CBT_NormalUse = sum(Decree75_QM1_24, Decree75_QM25_48)) %>%
-      rowwise() %>% mutate(COB_CBT_BorrowedWinter = (DataObject_3_Flow - DataObject_44_Flow)) %>%
-      rowwise() %>% mutate(COB_CBT_YeartoYearDebt = (DataObject_44_Flow)) %>%
-      rowwise() %>% mutate(COB_CBT_TotalUse = sum(COB_CBT_NormalUse, COB_CBT_BorrowedWinter, COB_CBT_YeartoYearDebt)) %>%
-      rowwise() %>% mutate(COB_CBT_Unused = round(COB_CBT_allotment - COB_CBT_TotalUse, 0))
+    }
+    Quota_annual <- bind_rows(Quota_annual_list[[1]], Quota_annual_list[[2]]) %>%
+      # order output by modelID then year (to help with column binds later)
+      arrange(ModelRun, year) %>%
+      select(-qm)
 
 
-    cbt_group_description <- data.frame(Name = c("DataObject_3_Flow", "Decree75_QM1_24", "Decree75_QM25_48", "DataObject_44_Flow",
-                                                 "COB_CBT_allotment", "COB_CBT_TotalUse", "COB_CBT_Unused",
-                                                 "COB_CBT_NormalUse", "COB_CBT_BorrowedWinter", "COB_CBT_YeartoYearDebt"),
-                                        Group = c("CBT Model Component", "CBT Model Component", "CBT Model Component", "CBT Model Component",
-                                                  "Total CBT", "CBT Summary", "CBT Summary",
-                                                  "CBT Component", "CBT Component", "CBT Component"))
+    final_data <- left_join(cbt_dec_75_QM5_24, cbt_dec_75_QM25_48, by=c("year"="year", "ModelRun"="ModelRun"))
+    final_data <- left_join(final_data, cbt_dec_75_QM1_4, by=c("year"="year", "ModelRun"="ModelRun"))
+    final_data <- left_join(final_data, Quota_annual, by=c("year"="year", "ModelRun"="ModelRun"))
+    final_data <- final_data %>%
+      mutate(COB_CBT_Used = sum(Decree75_QM5_24, Decree75_QM25_48, Decree75_QM1_4)) %>%
+      mutate(COB_CBT_Unused = COB_CBT_allotment - COB_CBT_Used) %>%
+      select(-DataObject_14_Flow)
+    final_data
+
+
+
+    # make the descritpions for new variables
+    cbt_group_description <- data.frame(Name = c("Decree75_QM5_24", "Decree75_QM25_48", "Decree75_QM1_4",
+                                                 "COB_CBT_allotment", "COB_CBT_Used", "COB_CBT_Unused"),
+                                        Group = c("CBT Model Component", "CBT Model Component", "CBT Model Component",
+                                                  "Total CBT", "CBT Summary", "CBT Summary"))
 
     # add the new variables to 'definitions'
-    temp_new_data <- matrix(NA, ncol = 4, nrow = 8)
-    temp_new_data[1, 1:4] <- c("Decree75_QM1_24", "COB CBT use QM1-24", "Flow", "Flow (af)")
+    temp_new_data <- matrix(NA, ncol = 4, nrow = 6)
+    temp_new_data[1, 1:4] <- c("Decree75_QM5_24", "COB CBT use QM5-24", "Flow", "Flow (af)")
     temp_new_data[2, 1:4] <- c("Decree75_QM25_48", "COB CBT use QM25-48", "Flow", "Flow (af)")
-    temp_new_data[3, 1:4] <- c("COB_CBT_allotment", "Annual CBT Allotment (af)", "Flow", "Flow (af)")
-    temp_new_data[4, 1:4] <- c("COB_CBT_TotalUse", "COB Total CBT Water Used", "Flow", "Flow (af)")
-    temp_new_data[5, 1:4] <- c("COB_CBT_Unused", "COB Unused CBT Water", "Flow", "Flow (af)")
-    temp_new_data[6, 1:4] <- c("COB_CBT_NormalUse", "COB normal use of CBT water", "Flow", "Flow (af)")
-    temp_new_data[7, 1:4] <- c("COB_CBT_BorrowedWinter", "COB borrowed CBT winter water", "Flow", "Flow (af)")
-    temp_new_data[8, 1:4] <- c("COB_CBT_YeartoYearDebt", "COB CBT debt water", "Flow", "Flow (af)")
+    temp_new_data[3, 1:4] <- c("Decree75_QM1_4", "COB CBT use QM1-4", "Flow", "Flow (af)")
+    temp_new_data[4, 1:4] <- c("COB_CBT_allotment", "Annual CBT Allotment", "Flow", "Flow (af)")
+    temp_new_data[5, 1:4] <- c("COB_CBT_Used", "COB Used CBT Water", "Flow", "Flow (af)")
+    temp_new_data[6, 1:4] <- c("COB_CBT_Unused", "COB Unused CBT Water", "Flow", "Flow (af)")
+
     temp_new_data <- as.data.frame(temp_new_data)
     colnames(temp_new_data) <- c("Name", "Description", "Parameter", "Units")
 
@@ -3463,14 +1654,13 @@ for(z in 1:nrow(base_mods)) {
 
 
     # convert from wide to long format
-    annual_extract_long <- annual_extract %>%
-      pivot_longer(., cols = c(DataObject_3_Flow, Decree75_QM1_24, Decree75_QM25_48, DataObject_44_Flow,
-                               COB_CBT_allotment, COB_CBT_TotalUse, COB_CBT_Unused,
-                               COB_CBT_NormalUse, COB_CBT_BorrowedWinter, COB_CBT_YeartoYearDebt),
+    annual_extract_long <- final_data %>%
+      pivot_longer(., cols = c(Decree75_QM5_24, Decree75_QM25_48, Decree75_QM1_4,
+                               COB_CBT_allotment, COB_CBT_Used, COB_CBT_Unused),
                    names_to = "Name", values_to = "Value") %>%
       left_join(., cbt_group_description, by = "Name") %>%
       left_join(., definitions2, by = "Name")
-
+    annual_extract_long
 
 
     g <- list()
@@ -3485,12 +1675,15 @@ for(z in 1:nrow(base_mods)) {
       # annual_extract_long_plot <- annual_extract_long %>%
       #   filter(Group == "CBT Component" & ModelRun == scenario_name[i])
 
+      annual_extract_long2 <- annual_extract_long %>%
+        filter(Group == "CBT Summary", Description == "COB Used CBT Water")
 
       # make a stacked area plot of the reusable supply scenario
       g[[i]] <- ggplot() +
-        geom_bar(data = filter(annual_extract_long, Group == "CBT Component" & ModelRun == scenario_name[i]),
+        geom_bar(data = filter(annual_extract_long2, Group == "CBT Summary" & ModelRun == scenario_name[i]),
                  aes_string(x = "year", y = "Value", fill = "Description"),
                  position = "stack", stat = "identity", color = "black", size = 0.05) + #
+        scale_fill_manual(values = "cornflowerblue") +
         geom_line(data = filter(annual_extract_long, Group == "Total CBT" & ModelRun == scenario_name[i]),
                   aes_string(x = "year", y = "Value", color = "Name"),
                   size = 0.75) +
@@ -3520,7 +1713,7 @@ for(z in 1:nrow(base_mods)) {
         theme_bw() +
         ylab("Flow (af)") +
         xlab("Water Year") +
-        ylim(0, 22000) +
+        ylim(NA, 22000) +
         scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
         ggtitle(paste(scenario_name[i], ": CBT Water by Year", sep = "")) +
         theme(plot.title = element_text(size = title_size),
@@ -3535,7 +1728,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 2x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(g[[1]], g[[2]], nrow = 2,
@@ -3547,319 +1740,43 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 2x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(b[[1]], b[[2]], nrow = 2,
                    top = plot_title,
                    right = ""))
 
+    ### add table of cbt use
 
     ### New annual table analysis
-    annual_extract_table <-
-      annual_extract %>%
-      select(year, ModelRun, COB_CBT_TotalUse, COB_CBT_Unused) %>%
+    annual_extract_table <- final_data %>%
+      select(year, ModelRun, COB_CBT_Used, COB_CBT_Unused) %>%
       group_by(ModelRun) %>%
-      summarise('CBT Use (mean)' = round(mean(COB_CBT_TotalUse),0), 'CBT Use (min)' = min(COB_CBT_TotalUse),
-                'CBT Use (max)' = max(COB_CBT_TotalUse),
+      summarise('CBT Use (mean)' = round(mean(COB_CBT_Used),0), 'CBT Use (min)' = min(COB_CBT_Used),
+                'CBT Use (max)' = max(COB_CBT_Used),
                 'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0), 'Unused CBT (min)' = min(COB_CBT_Unused),
-                'Unused CBT (max)' = max(COB_CBT_Unused))
+                'Unused CBT (max)' = max(COB_CBT_Unused)) %>%
+      gt() %>%
+      tab_header(
+        title = md("City of Boulder Annual C-BT Water Use"),
+        subtitle = md(paste0(scenario_name[1], " vs ", scenario_name[2]))
+      )
     annual_extract_table
 
     # when COB borrows water from CBT (year-to-year debt) it creates a negative CBT use (debit).
     # adjust the minimum value (if zero) so that it's not negative
-    annual_extract_table$`Unused CBT (min)` <- if_else(annual_extract_table$`Unused CBT (min)` < 0, 0, annual_extract_table$`Unused CBT (min)`)
+    # annual_extract_table$`Unused CBT (min)` <- if_else(annual_extract_table$`Unused CBT (min)` < 0, 0, annual_extract_table$`Unused CBT (min)`)
 
 
-    # ### run a monthly analysis
-    # extract_list <- list()
-    # for (i in 1:n_file_prefix){
-    #
-    #   extract_list[[i]] <- data_list[[i]] %>%
-    #     #group_by(ModelRun) %>%
-    #     select(!!!syms(site_selection)) %>%
-    #     group_by(year, Month, ModelRun) %>%
-    #     summarise(across(site_selection[6]:site_selection[n_site_selection], sum))
-    #
-    #   # %>%
-    #   #   left_join(., qm_convert, by = c("qm" = "QM")) %>%
-    #   #   select(-'WY-QM', -Water.Year, -wyqm, -Cal.Year, -'QM start day', -'QM end day',
-    #   #          -Start.Date, -End.Date, -'Days in QM')
-    #   #   #group_by(qm, ModelRun) %>%
-    #     # faster way to do this (but it doesn't adjust column names)
-    #     # summarise(across(site_selection[5]:site_selection[n_site_selection], mean))
-    #
-    # }
-    # extract_list[[1]]
-    #
-    # # merge the data from the loops together
-    # monthly_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-    #   group_by(Month, ModelRun) %>%
-    #   summarise(., Min=min(Decree_75_Flow),
-    #             Average=round(mean(Decree_75_Flow), 0), Max=max(Decree_75_Flow)) %>%
-    #   pivot_wider(names_from = c(ModelRun), values_from = c(Min, Average, Max)) %>%
-    #   # it's more complicated to rename the columns a variable names
-    #   # use the !! (bang, bang) operator before paste to name the function
-    #   # then use := operator to force names on the LHS of the equation.
-    #   rename(!!(paste(scenario_name[1], " (Min)", sep = "")) :=  paste("Min_", scenario_name[1], sep = ""),
-    #          !!(paste(scenario_name[1], " (Avg)", sep = "")) :=  paste("Average_", scenario_name[1], sep = ""),
-    #          !!(paste(scenario_name[1], " (Max)", sep = "")) :=  paste("Max_", scenario_name[1], sep = "")
-    #          ) %>%
-    #   rename(!!(paste(scenario_name[2], " (Min)", sep = "")) :=  paste("Min_", scenario_name[2], sep = ""),
-    #          !!(paste(scenario_name[2], " (Avg)", sep = "")) :=  paste("Average_", scenario_name[2], sep = ""),
-    #          !!(paste(scenario_name[2], " (Max)", sep = "")) :=  paste("Max_", scenario_name[2], sep = "")
-    #   ) %>%
-    #   relocate(paste(scenario_name[2], " (Avg)", sep = ""), .after = paste(scenario_name[2], " (Min)", sep = "")) %>%
-    #   relocate(paste(scenario_name[2], " (Max)", sep = ""), .after = paste(scenario_name[2], " (Min)", sep = ""))
-    #
-    #
-    #
-    #
-    # ### Calculate the remaining CBT Quota
-    # site_selection <- c("year", "qm", "Month", "Date", "ModelRun", "Decree_75_Content",
-    #                     "DataObject_3_Flow")
-    # n_site_selection <- length(site_selection)
-    #
-    # ### run an annual analysis
-    # extract_list <- list()
-    # for (i in 1:n_file_prefix){
-    #
-    #   extract_list[[i]] <- data_list[[i]] %>%
-    #     # select the columns of interest from the vector above using !!!syms to read it properly
-    #     select(!!!syms(site_selection)) %>%
-    #     # get the Boulder CBT capacity on March 31, before the new quota is called on April 1
-    #     # (the CBT decree capacity resets to 0 in model on QM 25)
-    #     filter(qm == 24) %>%
-    #     # make a new column that offsets the year by 1 to reflect when that water was actually used
-    #     mutate(cbt_year_taken = year - 1) %>%
-    #     select(-Month, -DataObject_3_Flow)
-    #
-    # }
-    # cbt_water_used_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-    #   # order output by modelID then year (to help with column binds later)
-    #   arrange(ModelRun, year)
-    #
-    #
-    #
-    # ### get the annual CBT borrow/carryover water (DataObject 3)
-    # cob_cbt_borrow_list <- list()
-    # for (i in 1:n_file_prefix){
-    #
-    #   cob_cbt_borrow_list[[i]] <- data_list[[i]] %>%
-    #     # select the columns of interest from the vector above using !!!syms to read it properly
-    #     select(!!!syms(site_selection)) %>%
-    #     # get the Boulder CBT borrow volume, which is decided on QM 5 in the model
-    #     filter(qm == 5) %>%
-    #     # make a new column that offsets the year by 1 to reflect when that water was actually used
-    #     #mutate(cbt_year_taken = year - 1) %>%
-    #     select(-Month, -Decree_75_Content) %>%
-    #     # order output by modelID then year (to help with column binds later)
-    #     arrange(ModelRun, year) %>%
-    #     # rename date column so it is distinct from others
-    #     rename(Date_QM5 = Date)
-    #
-    # }
-    # cob_cbt_borrow <- bind_rows(cob_cbt_borrow_list[[1]], cob_cbt_borrow_list[[2]]) %>%
-    #   # filter the years to match the cbt water taken vs water year
-    #   filter(year >= 1915 & year <= 2013)
-    #
-    #
-    # # get the cbt quota data & remove the last year of data
-    # Quota_annual2 <- Quota_annual %>%
-    #   filter(Year >= 1915 & Year <= 2013)
-    #
-    #
-    # # # merge the data from the loops together
-    # # cbt_unused_extract <- bind_rows(extract_list[[1]], extract_list[[2]]) %>%
-    # #   arrange(ModelRun, year)
-    #
-    # # merge the data from the loops together
-    # cbt_water_used_extract2 <- cbt_water_used_extract %>%
-    #   # filter the years to match the cbt water taken vs water year
-    #   filter(cbt_year_taken >= 1915 & cbt_year_taken <= 2013) %>%
-    #   # add the annual COB CBT borrow water
-    #   bind_cols(., cob_cbt_borrow) %>%
-    #   # add the actual annual c-bt quota
-    #   bind_cols(., Quota_annual2) %>%
-    #   # calculate the maximum COB CBT quota water they can use
-    #   mutate(MaxQuotaWater = 21174 * Quota) %>%
-    #   # calculate CBT borrow + normal cbt COB quota use
-    #   mutate(UsedQuota = Decree_75_Content + DataObject_3_Flow) %>%
-    #   # calculate the unused quota water
-    #   mutate(UnusedQuota = MaxQuotaWater - UsedQuota) %>%
-    #   # rename duplicate columns from merging datasets
-    #   rename(ModelRun = ModelRun...4, ModelRunBorrow = ModelRun...10, ModelRunQuota = ModelRun...13)
-    #
-    # cbt_unused_extract_table <- cbt_water_used_extract2 %>%
-    #   # calculate annual min, max, avg of unused quota water
-    #   group_by(ModelRun) %>%
-    #   summarise(., Average=round(mean(UnusedQuota),0), Max=max(UnusedQuota))
-    #
-    # g <- list()
-    # for (i in 1:n_scenario_name){
-    #
-    #   # subset the data for only the data needed & filter for the necessary scenario
-    #   cbt_unused_extract_plot <- cbt_water_used_extract2 %>%
-    #     select(cbt_year_taken, ModelRun, MaxQuotaWater, UsedQuota, UnusedQuota) %>%
-    #     filter(ModelRun == scenario_name[i]) %>%
-    #     pivot_longer(., cols = c(UsedQuota, UnusedQuota), names_to = "CBT_Water", values_to = "Flow_af")
-    #
-    #
-    #   # make a stacked area plot of the reusable supply scenario
-    #   g[[i]] <- ggplot(cbt_unused_extract_plot, aes_string(x = "cbt_year_taken", y = "Flow_af", fill = "CBT_Water")) +
-    #     geom_bar(position="stack", stat="identity", color = "black", size = 0.05) + #
-    #     #geom_line(aes_string(x = "cbt_year_taken", y = "MaxQuotaWater"), size = 0.75, color = "black") +
-    #     #geom_area() +  #col = color_list[i]
-    #     theme_bw() +
-    #     ylab("Flow (af)") +
-    #     xlab("Water Year") +
-    #     ylim(0, 22000) +
-    #     ggtitle(paste(scenario_name[i], ": CBT Water by Year", sep = "")) +
-    #     theme(plot.title = element_text(size = title_size),
-    #           axis.title = element_text(size = xaxis_size))
-    #   #scale_fill_manual(values = c("#0073C2FF", "#EFC000FF", ))
-    #   #g[[i]]
-    #
-    #
-    # }
-
-    # # define the plot name
-    # plot_title <- "2a. C-BT Annual Water Use"
-    # file_name <- paste(plot_title, " 2x1 ", sep = "")
-    #
-    # ggsave(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
-    #         output_folder, ".pdf", sep = ""),
-    #   width = 14, height = 8,
-    #   grid.arrange(g[[1]], g[[2]], nrow = 2,
-    #                top = plot_title,
-    #                right = ""))
-
-
-
-    ### export the two datasets as tables to ggarrange
-    # set the theme, sizes
-    size <- 1
-    size1 <- 1
-    tt <- ttheme_default(core = list(fg_params=list(cex = size)),
-                         colhead = list(fg_params=list(cex = size1)),
-                         rowhead = list(fg_params=list(cex = size)))
-
-
-    ### Table 1
-    tbl_temp_a <- tableGrob(annual_extract_table, theme = tt, rows = NULL)
-    # add grid around the headers
-    tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                  grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                  t = 1, l = 1, r = ncol(tbl_temp_a))
-    # add box around the first column of data
-    tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                  grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                  t = 1, b = nrow(tbl_temp_a), l = 1, r = 1)
-    # add box around the second model run of data
-    tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                  grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                  t = 1, b = nrow(tbl_temp_a), l = 2, r = 4)
-    # add box around the second model run of data
-    tbl_temp_a <- gtable_add_grob(tbl_temp_a,
-                                  grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                                  t = 1, b = nrow(tbl_temp_a), l = 5, r = ncol(tbl_temp_a))
-
-    grid.draw(tbl_temp_a)
-
-
-    # ### Table 2
-    # # add box around the column headers
-    # tbl_temp_b <- tableGrob(monthly_extract, theme = tt, rows = NULL)
-    # # add grid around the headers
-    # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-    #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                              t = 1, l = 1, r = ncol(tbl_temp_b))
-    # # add box around the first column of data
-    # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-    #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                              t = 1, b = nrow(tbl_temp_b), l = 1, r = 1)
-    # # add box around the first model run of data
-    # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-    #                              grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                              t = 1, b = nrow(tbl_temp_b), l = 2, r = 4)
-    # # add box around the second model run of data
-    # tbl_temp_b <- gtable_add_grob(tbl_temp_b,
-    #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                               t = 1, b = nrow(tbl_temp_b), l = 5, r = ncol(tbl_temp_b))
-    # grid.draw(tbl_temp_b)
-    #
-    #
-    # ### Table 3
-    # tbl_temp_c <- tableGrob(cbt_unused_extract_table, theme = tt, rows = NULL)
-    # # add grid around the headers
-    # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-    #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                               t = 1, l = 1, r = ncol(tbl_temp_c))
-    # # add box around the first model run of data
-    # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-    #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                               t = 2, b = nrow(tbl_temp_c), l = 1, r = ncol(tbl_temp_c))
-    # # add box around the first column of data
-    # tbl_temp_c <- gtable_add_grob(tbl_temp_c,
-    #                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-    #                               t = 1, b = nrow(tbl_temp_c), l = 1, r = 1)
-    #
-    # grid.draw(tbl_temp_c)
-    #
-    #
-    #
-    # # define the plot name
-    # plot_title <- "2b. C-BT Quota Annual and Monthly Summary Tables"
-    # file_name <- paste(plot_title, " 2x2 ", sep = "")
-    #
-    # # # save the plot
-    # # ggsave(
-    # #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
-    # #         output_folder, ".pdf", sep = ""),
-    # #   width = 14, height = 8,
-    # #   grid.arrange(tbl_temp_a, tbl_temp_c, tbl_temp_b, nrow = 2,
-    # #                top = plot_title,
-    # #                right = "", bottom = "",
-    # #                layout_matrix = rbind(c(1, 2),
-    # #                                      c(3, 3))),
-    # #   grid.text("Plot header", x = unit(0.5, "npc"), y = unit(.51, "npc"),
-    # #             gp = gpar(fontsize=20, fontfamily="Times New Roman")))
-
+    # define the table export name & save
     plot_title <- "2ac. COB C-BT Annual Water Use"
-    file_name <- paste(plot_title, " 1x1 ", sep = "")
+    file_name <- paste0(plot_title, " table ")
 
-    # save the plot
-    # pdf(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
-    #         output_folder, ".pdf", sep = ""),
-    #   width = 14, height = 8)
-
-    # grid.arrange(tbl_temp_a, tbl_temp_c, tbl_temp_b, nrow = 2,
-    #              top = plot_title,
-    #              right = "", bottom = "",
-    #              layout_matrix = rbind(c(1, 1),
-    #                                    c(3, 3)))
-    tbl_temp_a2 <- grid.arrange(tbl_temp_a, nrow = 1,
-                                top = plot_title,
-                                right = "", bottom = "",
-                                layout_matrix = rbind(c(1, 1),
-                                                      c(3, 3)))
-
-    ggsave(
-      filename =  paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",                    output_folder, ".png", sep = ""),
-      width = 12,
-      height = 8,
-      tbl_temp_a2
+    gtsave(data = annual_extract_table,
+           filename = paste0(model_folder, "/", output_folder, "/", file_name, model_version, ".png"),
+           zoom = 0.9
     )
-    grid.text("Annual C-BT Water Use", x = unit(0.5, "npc"), y = unit(0.81, "npc"),
-              gp = gpar(fontsize = 14))
-    # grid.text("Annual Unused C-BT Water", x = unit(0.75, "npc"), y = unit(0.81, "npc"),
-    #           gp = gpar(fontsize = 14))
-    # grid.text("Monthly C-BT Water", x = unit(0.5, "npc"), y = unit(0.52, "npc"),
-    #           gp = gpar(fontsize = 14))
-
-    dev.off()
 
     # rm(site_selection, n_site_selection, extract_list, extract, annual_extract, monthly_extract,
     #    cob_cbt_borrow_list, cob_cbt_borrow, Quota_annual2,
@@ -3992,7 +1909,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 2x2 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 2,
@@ -4113,7 +2030,7 @@ for(z in 1:nrow(base_mods)) {
 
     # export the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 2,
@@ -4256,7 +2173,7 @@ for(z in 1:nrow(base_mods)) {
     # file_name <- paste(plot_title, " 4x1 ", sep = "")
     #
     # ggsave(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
     #         output_folder, ".pdf", sep = ""),
     #   width = 14, height = 8,
     #   grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], nrow = 4,
@@ -4298,10 +2215,12 @@ for(z in 1:nrow(base_mods)) {
       extract_list[[i]] <- data_list[[i]] %>%
         group_by(ModelRun) %>%
         select(!!!syms(site_selection)) %>%
-        rowwise() %>% mutate(TotalReuse = sum(DataObject_30_Flow, DataObject_28_Flow, DataObject_29_Flow,
-                                              Reservoir_13_Content, Reservoir_25_Content)) %>%
-        rowwise() %>% mutate(TotalContents = sum(Reservoir_1_Content, Reservoir_3_Content, DataObject_1_Flow,
-                                                 Reservoir_13_Content, Reservoir_25_Content))
+        rowwise() %>%
+        mutate(TotalReuse = sum(DataObject_30_Flow, DataObject_28_Flow, DataObject_29_Flow,
+                                Reservoir_13_Content, Reservoir_25_Content)) %>%
+        rowwise() %>%
+        mutate(TotalContents = sum(Reservoir_1_Content, Reservoir_3_Content, DataObject_1_Flow,
+                                   Reservoir_13_Content, Reservoir_25_Content))
       # rowwise() %>% mutate(WittTotalInflow = sum(WittemyerRecaptureWWTPReuse, WittemyerRecaptureGREP,
       #                                            WittemyerFirstFillRight))
       # group_by(year, ModelRun) %>%
@@ -4402,7 +2321,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 5x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]],  nrow = 5,
@@ -4415,7 +2334,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 1x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[6]],  nrow = 1,
@@ -4574,34 +2493,60 @@ for(z in 1:nrow(base_mods)) {
     }
 
     # define the plot name
-    plot_title <- "2j. CBT-Windy Gap in out - Time Series Plot"
-    file_name <- paste(plot_title, " 3x2 ", sep = "")
+    plot_title <- "2j. Boulder Reservoir Inflow Outflow - Time Series Plot"
+    file_name <- paste(plot_title, " 5x2 ", sep = "")
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
-      grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]],
-                   p[[7]], p[[8]], p[[9]], p[[10]], p[[11]], p[[12]], p[[13]], nrow = 7,
+      grid.arrange(p[[1]],
+                   p[[2]],
+                   p[[3]],
+                   p[[4]],
+                   p[[5]],
+                   # p[[6]],
+                   p[[7]],
+                   p[[8]],
+                   # p[[9]],
+                   # p[[10]],
+                   p[[11]],
+                   p[[12]],
+                   p[[13]],
+                   nrow = 5,
                    top = plot_title,
                    right = ""))
 
     rm(cbt_windygap, cbt_windygap2, extract, extract2, final, final_site_list, n_final_site_list)
 
+    #       Plot  shows Boulder Reservoir data. Can you modify this so it's the following:
+    # DataObject_1_Flow (COB CBT Water)
+    # DataObject_29_Flow (COB WG Water)
+    # NEW MUTATE OBJECT NAME = DataObject_1_Flow + DataObject_29_Flow (COB Total Boulder Res Storage)
+    #
+    # Plot 2L is then modified to show Boulder Reservoir summary
+    # NEW MUTATE OBJECT NAME = DataObject_1_Flow + DataObject_29_Flow (COB Total Boulder Res Storage) (same as above)
+    # DataObject_2_Flow (Northern Boulder Res Water)
+    # Reservoir_13_Contents (Total Boulder Res Storage)
 
 
-    # CBT WG Boulder Res qm output 2k -----------------------------------------
 
+    # CBT WG Boulder Res qm output  -----------------------------------------
+    # i <- 1
+    rm(i)
     extract <- list()
     for (i in 1:n_file_prefix){
 
-      extract_list[[i]] <- data_list[[i]] %>%
+      extract_list[[i]] <-
+        data_list[[i]] %>%
         # group by ModelRun to calculate values by group
         group_by(ModelRun) %>%
         # select the columns of interest from the vector above using !!!syms to read it properly
-        select("year", "qm", "Date", "ModelRun", "DataObject_29_Flow", "DataObject_1_Flow",
-               "DataObject_2_Flow") %>%
+        select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow") %>%
+        dplyr::group_by(year, Date, ModelRun) %>%
+        dplyr::mutate(COB_Total_Boulder_Res_Storage = DataObject_1_Flow + DataObject_29_Flow) %>%
+        dplyr::ungroup() %>%
         # now, group data by Year & ModelRun to sum data annually
         group_by(year, ModelRun)
 
@@ -4622,14 +2567,34 @@ for(z in 1:nrow(base_mods)) {
 
 
     # put to long form
-    extract2 <- extract %>%
+    extract2 <-
+      extract %>%
       # convert from 'wide' to 'long' format for plotting w/ ggplot
-      pivot_longer(., cols = c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_2_Flow"),
-                   names_to = "Name", values_to = "Output")
-    extrac2_site_list <- c("DataObject_29_Flow", "DataObject_1_Flow", "DataObject_2_Flow")
+      pivot_longer(., cols = c("DataObject_1_Flow", "DataObject_29_Flow", "COB_Total_Boulder_Res_Storage"),
+                   names_to = "Name", values_to = "Output") %>%
+      dplyr::left_join(
+        definitions,
+        by = "Name"
+      ) %>%
+      dplyr::mutate(
+        Description = dplyr::case_when(
+          Name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
+          TRUE                                    ~ Description
+        ),
+        Name = dplyr::case_when(
+          Name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
+          TRUE                                    ~ Name
+        ),
+        Units = dplyr::case_when(
+          Name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
+          TRUE                                    ~ Units
+        )
+      )
+    extrac2_site_list <- c("DataObject_1_Flow", "DataObject_29_Flow", "DataObject_1_Flow + DataObject_29_Flow")
     n_extrac2_site_list <- length(extrac2_site_list)
 
 
+    # i <- 1
     p <- list()
     for (i in 1:n_extrac2_site_list){
 
@@ -4637,6 +2602,9 @@ for(z in 1:nrow(base_mods)) {
       extract_plot <- extract2 %>%
         filter(Name == extrac2_site_list[i])
 
+      ylab = unique(extract_plot$Units)
+      title_name <- unique(extract_plot$Name)
+      desc <- unique(extract_plot$Description)
 
       # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
       p[[i]] <- ggplot(extract_plot, aes_string(x = "Date", y = "Output", color = "ModelRun",
@@ -4644,9 +2612,11 @@ for(z in 1:nrow(base_mods)) {
         geom_line() +
         theme_bw() +
         ylim(0, NA) +
-        ylab(y_lab_list[i]) +
-        xlab("Water Year") +
-        ggtitle(extract_plot$Name[1]) +
+        ggplot2::labs(
+          title = paste0(title_name, " = ", desc),
+          y = ylab,
+          x = "Water Year"
+        ) +
         theme(plot.title = element_text(size = title_size),
               axis.title = element_text(size = xaxis_size))
 
@@ -4660,7 +2630,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
@@ -4787,7 +2757,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]], nrow = 3,
@@ -4801,7 +2771,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(g[[1]], g[[2]], nrow = 2,
@@ -4952,7 +2922,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(g[[1]], g[[2]], h[[1]], nrow =3,
@@ -5051,7 +3021,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], nrow = 5,
@@ -5177,7 +3147,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[8]], p[[2]], p[[3]], p[[4]], p[[5]],
@@ -5288,7 +3258,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]],
@@ -5428,7 +3398,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 2x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(g[[1]], g[[2]], nrow = 2,
@@ -5511,7 +3481,7 @@ for(z in 1:nrow(base_mods)) {
     file_name <- paste(plot_title, " 2x1 ", sep = "")
 
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(g[[1]], g[[2]], nrow = 2,
@@ -5587,7 +3557,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]], p[[5]], p[[6]], nrow = 6,
@@ -5632,7 +3602,7 @@ for(z in 1:nrow(base_mods)) {
       extract_list[[i]] <- data_list[[i]] %>%
         group_by(year, ModelRun) %>%
         select(!!!syms(site_selection)) %>%
-        left_join(., isf_year_type, by = "wyqm") %>%
+        left_join(., ISF_year_type, by = "wyqm") %>%
         mutate(GREP_Upper_ISF_cfs = if_else(DataObject_33_Flow == 350,
                                             (Link_350_Flow / DaysInQM / 1.9835),
                                             (Link_42_Flow / DaysInQM / 1.9835))) %>%
@@ -5705,7 +3675,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     ggsave(
-      paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
             output_folder, device_type, sep = ""),
       width = 14, height = 8,
       grid.arrange(p[[1]], p[[2]], p_drought_triggers, p[[3]], nrow = 2,
@@ -5795,7 +3765,7 @@ for(z in 1:nrow(base_mods)) {
 
     # save the plot
     # pdf(
-    #   paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
+    #   paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
     #         output_folder, ".pdf", sep = ""),
     #   width = 14, height = 8)
 
@@ -5812,7 +3782,7 @@ for(z in 1:nrow(base_mods)) {
                                                       c(3, 3)))
 
     ggsave(
-      filename =  paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",                    output_folder, ".png", sep = ""),
+      filename =  paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",                    output_folder, ".png", sep = ""),
       width = 12,
       height = 8,
       tbl_temp_b2
@@ -5826,89 +3796,120 @@ for(z in 1:nrow(base_mods)) {
 
     dev.off()
 
+
+    # South Platte Calls Analysis ---------------------------------------------
+
+    # CBT Boulder Res qm output 2l -----------------------------------------
+
+    # showing DO30, DO2, and Res 12, that would be great
+
+    extract <- list()
+
+
+    for (i in 1:n_file_prefix){
+
+      extract_list[[i]] <- data_list[[i]] %>%
+        # group by ModelRun to calculate values by group
+        group_by(ModelRun) %>%
+        # select the columns of interest from the vector above using !!!syms to read it properly
+        select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow", "DataObject_2_Flow",
+               "Reservoir_12_Content") %>%
+        # select("year", "qm", "Date", "ModelRun", "DataObject_1_Flow", "DataObject_29_Flow") %>%
+        dplyr::group_by(year, Date, ModelRun) %>%
+        dplyr::mutate(COB_Total_Boulder_Res_Storage = DataObject_1_Flow + DataObject_29_Flow) %>%
+        dplyr::ungroup() %>%
+        # now, group data by Year & ModelRun to sum data annually
+        group_by(year, ModelRun)
+
+      extract_list[[i]]
+
+    }
+
+    # merge the data from the loops together
+    extract <- bind_rows(extract_list[[1]], extract_list[[2]])
+
+    ### Check the factor & levels for the 'ModelRun' column (we will plot by this)
+    # factor(cbt_windygap$ModelRun)
+    # levels(cbt_windygap$ModelRun)
+    # # set the factor 'levels' to the correct plotting order
+    extract$ModelRun <-factor(extract$ModelRun, levels = c(scenario_name))
+    # Levels should be updated
+    levels(extract$ModelRun)
+
+
+    # put to long form
+    extract2 <- extract %>%
+      # convert from 'wide' to 'long' format for plotting w/ ggplot
+      pivot_longer(., cols = c("COB_Total_Boulder_Res_Storage", "DataObject_2_Flow", "Reservoir_12_Content"),
+                   names_to = "Name", values_to = "Output") %>%
+      dplyr::left_join(
+        definitions,
+        by = "Name"
+      ) %>%
+      dplyr::mutate(
+        Description = dplyr::case_when(
+          Name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
+          TRUE                                    ~ Description
+        ),
+        Name = dplyr::case_when(
+          Name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
+          TRUE                                    ~ Name
+        ),
+        Units = dplyr::case_when(
+          Name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
+          TRUE                                    ~ Units
+        )
+      )
+    extrac2_site_list <- c("DataObject_1_Flow + DataObject_29_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
+    n_extrac2_site_list <- length(extrac2_site_list)
+    y_lab_list <- c(rep("Flow (af)", 10), rep("Contents (af)", 3))
+
+    p <- list()
+    # i <- 1
+    for (i in 1:n_extrac2_site_list){
+
+      # select 1 flow data to plot per i iteration of loop
+      extract_plot <-
+        extract2 %>%
+        filter(Name == extrac2_site_list[i])
+
+      ylab = unique(extract_plot$Units)
+      title_name <- unique(extract_plot$Name)
+      desc <- unique(extract_plot$Description)
+
+
+      # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
+      p[[i]] <- ggplot(extract_plot, aes_string(x = "Date", y = "Output", color = "ModelRun",
+                                                linetype = "ModelRun")) +
+        geom_line() +
+        theme_bw() +
+        ylim(0, NA) +
+        ggplot2::labs(
+          title = paste0(title_name, " - ", desc),
+          y = ylab,
+          x = "Water Year"
+        ) +
+        theme(plot.title = element_text(size = title_size),
+              axis.title = element_text(size = xaxis_size))
+
+      # p[[i]]
+
+    }
+
+    # define the plot name
+    plot_title <- "2l. Boulder Reservoir QM Contents - COB & Nortern"
+    file_name <- paste(plot_title, " 3x1 ", sep = "")
+
+    # save the plot
+    ggsave(
+      paste(model_folder, "/", output_folder, "/", file_name, model_version, " ",
+            output_folder, device_type, sep = ""),
+      width = 14, height = 8,
+      grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
+                   top = plot_title,
+                   right = ""))
+
+    rm(n_extrac2_site_list, extrac2_site_list, extract, extract2)
+
   }
-  # South Platte Calls Analysis ---------------------------------------------
-
-  # CBT Boulder Res qm output 6c -----------------------------------------
-
-  # showing DO30, DO2, and Res 12, that would be great
-
-  extract <- list()
-
-  # i <- 1
-  for (i in 1:n_file_prefix){
-
-    extract_list[[i]] <- data_list[[i]] %>%
-      # group by ModelRun to calculate values by group
-      group_by(ModelRun) %>%
-      # select the columns of interest from the vector above using !!!syms to read it properly
-      select("year", "qm", "Date", "ModelRun", "DataObject_30_Flow", "DataObject_2_Flow",
-             "Reservoir_12_Content") %>%
-      # now, group data by Year & ModelRun to sum data annually
-      group_by(year, ModelRun)
-
-    extract_list[[i]]
-
-  }
-
-  # merge the data from the loops together
-  extract <- bind_rows(extract_list[[1]], extract_list[[2]])
-
-  ### Check the factor & levels for the 'ModelRun' column (we will plot by this)
-  # factor(cbt_windygap$ModelRun)
-  # levels(cbt_windygap$ModelRun)
-  # # set the factor 'levels' to the correct plotting order
-  extract$ModelRun <-factor(extract$ModelRun, levels = c(scenario_name))
-  # Levels should be updated
-  levels(extract$ModelRun)
-
-
-  # put to long form
-  extract2 <- extract %>%
-    # convert from 'wide' to 'long' format for plotting w/ ggplot
-    pivot_longer(., cols = c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content"),
-                 names_to = "Name", values_to = "Output")
-  extrac2_site_list <- c("DataObject_30_Flow", "DataObject_2_Flow", "Reservoir_12_Content")
-  n_extrac2_site_list <- length(extrac2_site_list)
-
-
-  p <- list()
-  for (i in 1:n_extrac2_site_list){
-
-    # select 1 flow data to plot per i iteration of loop
-    extract_plot <- extract2 %>%
-      filter(Name == extrac2_site_list[i])
-
-
-    # use 'aes_string' instead of the normal aes to read the site name column headers as strings!
-    p[[i]] <- ggplot(extract_plot, aes_string(x = "Date", y = "Output", color = "ModelRun",
-                                              linetype = "ModelRun")) +
-      geom_line() +
-      theme_bw() +
-      ylim(0, NA) +
-      ylab(y_lab_list[i]) +
-      xlab("Water Year") +
-      ggtitle(extract_plot$Name[1]) +
-      theme(plot.title = element_text(size = title_size),
-            axis.title = element_text(size = xaxis_size))
-
-    # p[[i]]
-
-  }
-
-  # define the plot name
-  plot_title <- "2k. Boulder Res QM - Time Series Plot"
-  file_name <- paste(plot_title, " 3x1 ", sep = "")
-
-  # save the plot
-  ggsave(
-    paste(model_folder, "/", output_folder, "/", file_name,base_model_version, " ",
-          output_folder, device_type, sep = ""),
-    width = 14, height = 8,
-    grid.arrange(p[[1]], p[[2]], p[[3]], nrow = 3,
-                 top = plot_title,
-                 right = ""))
-
-  rm(n_extrac2_site_list, extrac2_site_list, extract, extract2)
-
 }

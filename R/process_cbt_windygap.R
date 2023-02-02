@@ -1,4 +1,7 @@
-process_cbt_windygap <- function(df) {
+process_cbt_windygap <- function(
+    df,
+    qm_filter = 29
+    ) {
 
   cbt_wg <-
     df %>%
@@ -36,7 +39,7 @@ process_cbt_windygap <- function(df) {
         as.numeric)
     ) %>%
     dplyr::group_by(year, model_run) %>%
-    dplyr::filter(qm == 29) %>%
+    dplyr::filter(qm == qm_filter) %>%
     dplyr::select(-qm, -wyqm) %>%
     dplyr::ungroup() %>%
     tidyr::pivot_longer(

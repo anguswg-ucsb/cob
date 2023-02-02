@@ -1,3 +1,309 @@
+make_res_water_type_plot <- function(
+    df,
+    mod_run,
+    ymax = 6000,
+    title_size,
+    xaxis_size
+) {
+  # df         = extract_df
+  # mod_run    = runs_lst[i]
+  # ymax       = 6000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+  # extract_df <-
+  #   boulder_res %>%
+  #   dplyr::filter(name == boulder_res_sites[i])
+  # df         = extract_df
+  # mod_run       = runs_lst[i]
+  # ymax       = 3000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  res_water_type_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_col(
+      ggplot2::aes(x = year, y = output, fill = description),
+      position = "stack",
+      color    = "black"
+    ) +
+    ggplot2::labs(
+      title    = paste0(mod_run, ": Panama Reservoir Inflows by Year"),
+      y        = "Flow (af)",
+      x        = "Water year",
+      fill     = "Description"
+    ) +
+      # ggplot2::ylim(0, ymax) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = ymax/3))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(res_water_type_plot)
+
+}
+
+make_wittemyer_date_plot <- function(
+    df,
+    site,
+    ymax = 2000,
+    title_size,
+    xaxis_size
+) {
+
+  wittemyer_date_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = date, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = "Flow (af)",
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 500))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(wittemyer_date_plot)
+
+}
+
+make_wittemyer_qm_plot <- function(
+    df,
+    site,
+    ymax = 5000,
+    title_size,
+    xaxis_size
+) {
+
+  # df         = extract_df
+  # site       = unique(extract_df$title)[1]
+  # ymax       = 5000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  wittemyer_cont_qm_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = "Flow (af)",
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 1000))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(wittemyer_ts_plot)
+
+}
+
+make_wittemyer_ts_plot <- function(
+    df,
+    site,
+    ymax = 5000,
+    title_size,
+    xaxis_size,
+    timescale = "year"
+) {
+
+  # df         = extract_df
+  # site       = unique(extract_df$title)[1]
+  # ymax       = 5000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  if(timescale == "year") {
+
+    wittemyer_ts_plot <-
+      df %>%
+      ggplot2::ggplot() +
+      ggplot2::geom_line(
+        ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+      ) +
+      ggplot2::labs(
+        title    = paste0(site),
+        y        = "Contents (af)",
+        x        = "Water year",
+        color    = "Model run",
+        linetype = "Model run"
+      ) +
+      ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 500))) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+
+    return(wittemyer_ts_plot)
+
+  }
+
+  if(timescale == "qm") {
+
+    wittemyer_qm_plot <-
+      df %>%
+      ggplot2::ggplot() +
+      ggplot2::geom_line(
+        ggplot2::aes(x = qm, y = output, color = model_run, linetype = model_run)
+      ) +
+      ggplot2::labs(
+        title    = paste0(site),
+        y        = "Contents (af)",
+        x        = "Quarter Month",
+        color    = "Model run",
+        linetype = "Model run"
+      ) +
+      ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 500))) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+
+    return(wittemyer_qm_plot)
+
+  }
+
+}
+
+make_wittemyer_sources_plot <- function(
+    df,
+    mod_run,
+    ymax = 3000,
+    title_size,
+    xaxis_size
+) {
+
+  # extract_df <-
+  #   boulder_res %>%
+  #   dplyr::filter(name == boulder_res_sites[i])
+  # df         = extract_df
+  # mod_run       = runs_lst[i]
+  # ymax       = 3000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  wittemyer_sources_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_col(
+      ggplot2::aes(x = year, y = output, fill = name),
+      position = "stack",
+      color    = "black"
+    ) +
+    ggplot2::labs(
+      title    = paste0("Wittemyer Pond: Annual Inflow by Source (", mod_run, ")"),
+      y        = "Flow (af)",
+      x        = "Water year",
+      fill     = "Inflow"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = ymax/3))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(wittemyer_sources_plot)
+
+}
+
+
+make_boulder_res_plot <- function(
+    df,
+    site,
+    desc,
+    ymax = NA,
+    title_size,
+    xaxis_size
+) {
+
+  # extract_df <-
+  #   boulder_res %>%
+  #   dplyr::filter(name == boulder_res_sites[i])
+  # df         = extract_df
+  # site       = boulder_res_sites[i]
+  # desc       = unique(extract_df$description)[1]
+  # ymax       = ymax
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  boulder_res_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = date, y = output, color = model_run, linetype = model_run)
+    ) +
+    # ggplot2::ylim(0, ymax) +
+    ggplot2::labs(
+      title    = paste0(site, " = ", desc),
+      y        = "Flow (af)",
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 3000))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(boulder_res_plot)
+
+}
+
+make_wg_boulder_plot <- function(
+    df,
+    site,
+    desc,
+    ymax = NA,
+    title_size,
+    xaxis_size
+) {
+
+ wg_boulder_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = date, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::ylim(0, ymax) +
+    ggplot2::labs(
+      title    = paste0(site, " = ", desc),
+      y        = "Flow (af)",
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(wg_boulder_plot)
+
+}
+
 make_cbt_windygap_plot <- function(
     df,
     site,
