@@ -1,3 +1,130 @@
+make_grep_analysis_plot <- function(
+    df,
+    site,
+    units,
+    ymax = 7000,
+    y_by = 2000,
+    title_size,
+    xaxis_size
+) {
+
+  # df         = extract_df
+  # site       = unique(extract_df$title)
+  # units      = unique(extract_df$units)
+  # ymax       = 7000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  # extract_df$output %>% max()
+
+  grep_analysis_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = paste0(units),
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax),
+                                breaks = c(seq(0, ymax, by = y_by))
+                                ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(grep_analysis_plot)
+
+}
+
+make_panama_res_qm_plot <- function(
+    df,
+    site,
+    units,
+    ymax = 6000,
+    title_size,
+    xaxis_size
+) {
+
+  # df         = extract_df
+  # site       = unique(extract_df$name)
+  # units      = unique(extract_df$units)
+  # ymax       = 6000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  panama_res_qm_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = date, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = paste0(units),
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 2000))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(panama_res_qm_plot)
+
+}
+make_panama_res_plot <- function(
+    df,
+    site,
+    units,
+    ymax = 6000,
+    title_size,
+    xaxis_size
+    ) {
+  # df         = extract_df
+  # site       = unique(extract_df$title)
+  # units      = unique(extract_df$units)
+  # ymax       = 6000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+  # df         = extract_df
+  # site       = unique(extract_df$title)[1]
+  # ymax       = 6000
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+
+  panama_res_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = paste0(units),
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = c(0, ymax), breaks = c(seq(0, ymax, by = 2000))) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(panama_res_plot)
+
+}
 make_res_water_type_plot <- function(
     df,
     mod_run,

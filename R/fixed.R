@@ -1505,7 +1505,7 @@ comp_mods <-
   }) %>%
     stats::setNames(c(runs_lst))
 
-  # save plot 3D
+  # save plot 4A
   ggplot2::ggsave(
     filename = paste0(model_comp_dir, "/", "4a. Panama Reservoir Inflow Water Type 2x1.png"),
     width    = 14,
@@ -1523,12 +1523,271 @@ comp_mods <-
   # ---- Plot 4B ----
   # *****************
 
+    panama_res <-
+      outputs %>%
+      process_panama_res(definitions_df = definitions) %>%
+      dplyr::mutate(
+        model_run = factor(model_run, levels = c(scenario_name))
+      )
+
+    # dplyr::group_by(name)
+    # panama_res %>%
+    #     # dplyr::group_by(name) %>%
+    #     dplyr::group_split() %>%
+    #     # purrr::set_names(unlist(dplyr::group_keys(panama_res)))
+    #     stats::setNames(unlist(group_keys(panama_res)))
+
+    # list of site names
+    names_lst <- unique(panama_res$name)
+
+    # plot 4B, loop through each site and plot
+    panama_res_lst <- lapply(1:length(names_lst), function(i) {
+
+      # filter down to site
+      extract_df <-
+        panama_res %>%
+        dplyr::filter(name == names_lst[i])
+
+      message(paste0("Plotting: Panama Reservoir Annual - ", names_lst[i]))
+
+      # make plot
+      panama_res_plot <-
+        make_panama_res_plot(
+          df         = extract_df,
+          site       = unique(extract_df$title),
+          units      = unique(extract_df$units),
+          ymax       = 6000,
+          title_size = title_size,
+          xaxis_size = xaxis_size
+        )
+
+      panama_res_plot
+
+    }) %>%
+      stats::setNames(c(names_lst))
+
+    # names(panama_res_lst)
+
+    # save plot 4B
+    ggplot2::ggsave(
+      filename = paste0(model_comp_dir, "/", "4b. Panama Reservoir Annual Time Series Plots 4x2.png"),
+      width    = 14,
+      height   = 8,
+      gridExtra::grid.arrange(
+        panama_res_lst[["Reservoir_25_Content_avg"]],
+        panama_res_lst[["Reservoir_25_Content_min"]],
+        panama_res_lst[["Reservoir_25_Content_max"]],
+        panama_res_lst[["Link_571_Flow"]],
+        panama_res_lst[["Link_572_Flow"]],
+        panama_res_lst[["Link_617_Flow"]],
+        panama_res_lst[["Link_618_Flow"]],
+        panama_res_lst[["Link_573_Flow"]],
+        nrow   = 4,
+        top    = "4b. Panama Reservoir Annual Time Series Plots",
+        right  = ""
+      )
+    )
+
   # *****************
   # ---- Plot 4C ----
   # *****************
 
+    # Panama Reservoir Analysis
+    panama_res_qm <-
+      outputs %>%
+      process_panama_res_qm(definitions_df = definitions) %>%
+      dplyr::mutate(
+        model_run = factor(model_run, levels = c(scenario_name))
+      )
+
+    # list of site names
+    names_lst <- unique(panama_res_qm$name)
+
+    # plot 4C, loop through each site and plot
+    panama_res_qm_lst <- lapply(1:length(names_lst), function(i) {
+
+      # filter down to site
+      extract_df <-
+        panama_res_qm %>%
+        dplyr::filter(name == names_lst[i])
+
+      message(paste0("Plotting: Panama Reservoir QM - ", names_lst[i]))
+
+      # make plot
+      panama_qm_plot <-
+        make_panama_res_qm_plot(
+          df         = extract_df,
+          site       = unique(extract_df$description),
+          units      = unique(extract_df$units),
+          ymax       = 6000,
+          title_size = title_size,
+          xaxis_size = xaxis_size
+        )
+
+      panama_qm_plot
+
+    }) %>%
+      stats::setNames(c(names_lst))
+
+  # save plot 4C
+  save_plot(
+    plot_lst  = panama_res_qm_lst,
+    base_dir  = model_comp_dir,
+    plot_name = "4c. Panama Reservoir Quarter-Monthly Time Series Plots",
+    width     = 14,
+    height    = 8,
+    nrows     = 6
+  )
+
+  # save plot 4C
+  # ggplot2::ggsave(
+  #   filename = paste0(model_comp_dir, "/", "4c. Panama Reservoir Quarter-Monthly Time Series Plots 6x1.png"),
+  #   width    = 14,
+  #   height   = 8,
+  #   gridExtra::grid.arrange(
+  #     grobs = panama_res_qm_lst,
+  #   #   panama_res_qm_lst[["Reservoir_25_Content"]],
+  #   #   panama_res_qm_lst[["Link_571_Flow"]],
+  #   #   panama_res_qm_lst[["Link_572_Flow"]],
+  #   #   panama_res_qm_lst[["Link_617_Flow"]],
+  #   #   panama_res_qm_lst[["Link_618_Flow"]],
+  #   #   panama_res_qm_lst[["Link_573_Flow"]],
+  #     nrow   = 6,
+  #     top    = "4c. Panama Reservoir Quarter-Monthly Time Series Plot",
+  #     right  = ""
+  #   )
+  # )
+
+
+  # x = length(panama_res_qm_lst)
+  # cols = round(sqrt(x),0)
+  # rows = ceiling(x/cols)
+  # n <- length(panama_res_qm_lst)
+  # nCol <- floor(sqrt(n))
+  # do.call("grid.arrange", c(panama_res_qm_lst, ncol = nCol))
+
   # *****************
   # ---- Plot 4D ----
+  # *****************
+
+  # Panama Reservoir Analysis
+  panama_pond <-
+    outputs %>%
+    process_panama_pond_year(definitions_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+    )
+
+  # list of site names
+  names_lst <- unique(panama_pond$name)
+
+  # plot 4D, loop through each site and plot
+  panama_pond_lst <- lapply(1:length(names_lst), function(i) {
+
+    # filter down to site
+    extract_df <-
+      panama_pond %>%
+      dplyr::filter(name == names_lst[i])
+
+    message(paste0("Plotting: Panama Reservoir QM - ", names_lst[i]))
+
+    # make plot
+    panama_pond_plot <-
+      make_panama_pond_plot(
+        df         = extract_df,
+        site       = unique(extract_df$title),
+        units      = unique(extract_df$units),
+        ymax       = 6000,
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
+
+    panama_pond_plot
+
+  }) %>%
+    stats::setNames(c(names_lst))
+
+  # save plot 4C
+  save_plot(
+    plot_lst  = panama_pond_lst,
+    base_dir  = model_comp_dir,
+    plot_name = "4d. Panama Reservoir Average Annual Contents",
+    width     = 14,
+    height    = 8,
+    nrows     = 2
+  )
+
+  # ****************
+  # ---- Plot 5 ----
+  # ****************
+
+  # Gross Reservoir Pool Analysis
+  grep_analysis <-
+    outputs %>%
+    process_grep_analysis() %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+    )
+
+  # list of site names
+  names_lst <- unique(grep_analysis$name)
+
+  # plot 5, loop through each site and plot
+  grep_analysis_lst <- lapply(1:length(names_lst), function(i) {
+
+    # filter down to site
+    extract_df <-
+      grep_analysis %>%
+      dplyr::filter(name == names_lst[i])
+
+    # determine yaxis limits and tick mark increments based on range of max value
+    if(max(extract_df$output) >= 0 & max(extract_df$output) <= 7000) {
+
+      ymax = 7000
+      y_by   = 2500
+
+    } else {
+
+      ymax = max(extract_df$output)
+      y_by   = 10000
+
+    }
+
+    message(paste0("Plotting: GREP Analysis - ", names_lst[i], " - ymax: ", ymax))
+
+    # make plot
+    grep_analysis_plot <-
+      make_grep_analysis_plot(
+        df         = extract_df,
+        site       = unique(extract_df$title),
+        units      = unique(extract_df$units),
+        ymax       = ymax,
+        y_by       = y_by,
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
+
+    grep_analysis_plot
+
+  }) %>%
+    stats::setNames(c(names_lst))
+
+  # save plot 5
+  save_plot(
+    plot_lst  = grep_analysis_lst,
+    base_dir  = model_comp_dir,
+    plot_name = "5. GREP Annual Time Series Plots",
+    width     = 14,
+    height    = 8,
+    nrows     = 4
+  )
+
+  # *****************
+  # ---- Plot 6A ----
+  # *****************
+
+  # *****************
+  # ---- Plot 6B ----
   # *****************
 
   # ***************

@@ -2662,7 +2662,8 @@ for(z in 1:nrow(base_mods)) {
                   WittemyerRecaptureGREP = sum(Link_592_Flow),
                   WittemyerFirstFillRight = sum(Decree_106_Flow),
                   WittReleases = sum(Link_525_Flow)) %>%
-        rowwise() %>% mutate(WittTotalInflow = sum(WittemyerRecaptureWWTPReuse, WittemyerRecaptureGREP,
+        rowwise() %>%
+        mutate(WittTotalInflow = sum(WittemyerRecaptureWWTPReuse, WittemyerRecaptureGREP,
                                                    WittemyerFirstFillRight))
       ## faster way to do this (but it doesn't adjust column names)
       # summarise(across(Link_447_Flow:Link_406_Flow, sum))
@@ -2949,8 +2950,10 @@ for(z in 1:nrow(base_mods)) {
         # Reservoir 13 = Wittemyer pond contents
         select(year, qm, Date, ModelRun, Reservoir_13_Content, DataObject_27_Flow,
                Link_524_Flow, Link_592_Flow, Decree_106_Flow, Link_525_Flow) %>%
-        rename(Witt_qm_contents = Reservoir_13_Content, BoulderWWTPTreatedReuseWater = DataObject_27_Flow,
-               WittemyerRecaptureWWTPReuse = Link_524_Flow, WittemyerRepactureGREP = Link_592_Flow,
+        rename(Witt_qm_contents = Reservoir_13_Content,
+               BoulderWWTPTreatedReuseWater = DataObject_27_Flow,
+               WittemyerRecaptureWWTPReuse = Link_524_Flow,
+               WittemyerRepactureGREP = Link_592_Flow,
                WittemyerFirstFillRight = Decree_106_Flow) %>%
         # group by Year & ModelRun to calculate values by group & year
         group_by(year, ModelRun)
@@ -3254,7 +3257,7 @@ for(z in 1:nrow(base_mods)) {
 
     # define the plot name
     plot_title <- "4b. Panama Reservoir Annual Time Series Plots"
-    file_name <- paste(plot_title, " 5x2 ", sep = "")
+    file_name <- paste(plot_title, " 4x2 ", sep = "")
 
     # save the plot
     ggsave(

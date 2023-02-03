@@ -1,3 +1,253 @@
+process_grep_analysis <- function(
+    df
+) {
+
+  # make definition column names lowercase
+  # names(definitions_df) <- tolower(names(definitions_df))
+
+  # Gross Reservoir Pool Analysis
+  grep_df <-
+    df %>%
+    dplyr::select(
+      year, model_run,
+      Reservoir_21_Content, DataObject_31_Flow, DataObject_32_Flow,
+      Link_587_Flow, Link_588_Flow, Link_541_Flow,
+      DataObject_37_Flow, DataObject_38_Flow, Link_350_Flow
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-year, -model_run),
+        as.numeric)
+    ) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(
+      Reservoir_21_Content = mean(Reservoir_21_Content),
+      Link_350_Flow        = sum(Link_350_Flow),
+      DataObject_31_Flow   = mean(DataObject_31_Flow),
+      DataObject_32_Flow   = mean(DataObject_32_Flow),
+      Link_587_Flow        = sum(Link_587_Flow),
+      Link_588_Flow        = sum(Link_588_Flow),
+      DataObject_37_Flow   = sum(DataObject_37_Flow),
+      DataObject_38_Flow   = sum(DataObject_38_Flow)
+    ) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::mutate(
+      year  = as.numeric(year),
+      title = dplyr::case_when(
+        name == "Reservoir_21_Content" ~ "Boulder and Lafayette Gross Environmental Pool Contents (Average Annual)",
+        name == "DataObject_31_Flow"   ~ "City of Boulder GREP Contents (Average Annual)",
+        name == "DataObject_32_Flow"   ~ "City of Lafayette GREP Contents (Average Annual)",
+        name == "Link_587_Flow"        ~ "Lafayette Flow To GREP (Total Annual)",
+        name == "Link_588_Flow"        ~ "Boulder Exchange To GREP (Total Annual)",
+        name == "DataObject_37_Flow"   ~ "Boulder Releases from GREP (Total Annual)",
+        name == "DataObject_38_Flow"   ~ "Lafayette Releases from GREP (Total Annual)",
+        name == "Link_350_Flow"        ~ "South Boulder Creek Instream Flow (Total Annual)"
+      ),
+      units = dplyr::case_when(
+        name == "Reservoir_21_Content" ~ "Contents (af)",
+        name == "DataObject_31_Flow"   ~ "Contents (af)",
+        name == "DataObject_32_Flow"   ~ "Contents (af)",
+        name == "Link_587_Flow"        ~ "Flow (af)",
+        name == "Link_588_Flow"        ~ "Flow (af)",
+        name == "DataObject_37_Flow"   ~ "Flow (af)",
+        name == "DataObject_38_Flow"   ~ "Flow (af)",
+        name == "Link_350_Flow"        ~ "Flow (af)"
+      )
+    )
+    # dplyr::left_join(
+    #   dplyr::select(definitions_df, name, units),
+    #   by = "name"
+    # )
+
+  return(grep_df)
+
+}
+
+process_panama_pond_year <- function(
+    df,
+    definitions_df
+) {
+
+  # df <- outputs
+  # definitions_df <- definitions
+
+  # make definition column names lowercase
+  names(definitions_df) <- tolower(names(definitions_df))
+
+  # Get Panama Pond Average (Annual) Contents
+  panama_pond <-
+    df %>%
+    dplyr::select(
+      year, model_run, Reservoir_25_Content
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-year, -model_run),
+        as.numeric)
+    ) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(
+      Reservoir_25_Content_max = max(Reservoir_25_Content),
+      Reservoir_25_Content_avg = mean(Reservoir_25_Content)
+      ) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::mutate(
+      year  = as.numeric(year),
+      title = dplyr::case_when(
+        name == "Reservoir_25_Content_max" ~ "Panama Reservoir Maximum Annual Contents",
+        name == "Reservoir_25_Content_avg" ~ "Panama Reservoir Average Annual Contents"
+      )
+    ) %>%
+    dplyr::mutate(dict_join = "Reservoir_25_Content") %>%
+    dplyr::left_join(
+      dplyr::select(definitions_df, name, units),
+      by = c("dict_join" = "name")
+    ) %>%
+    dplyr::select(-dict_join)
+
+  return(panama_pond)
+
+}
+
+process_panama_res_qm <- function(
+    df,
+    definitions_df
+) {
+
+  # df <- outputs
+  # definitions_df <- definitions
+
+  # make definition column names lowercase
+  names(definitions_df) <- tolower(names(definitions_df))
+
+  # Panama Res QM Time Series Plots
+  panama_res_qm <-
+    df %>%
+    dplyr::select(
+      year, qm, start_date, end_date, model_run,
+      Reservoir_25_Content, Link_571_Flow, Link_572_Flow,
+      Link_617_Flow, Link_618_Flow, Link_573_Flow
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-year, -model_run, -qm, -start_date, -end_date,),
+        as.numeric)
+    ) %>%
+    dplyr::mutate(
+      date = start_date + floor(as.numeric(end_date - start_date))/2
+    ) %>%
+    dplyr::select(-start_date, -end_date) %>%
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year,  -qm, -date),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::left_join(
+      definitions_df,
+      by = "name"
+    )
+
+  return(panama_res_qm)
+
+}
+
+process_panama_res <- function(
+    df,
+    definitions_df
+) {
+
+  # df <- outputs
+  # definitions_df <- definitions
+
+  # make definition column names lowercase
+  names(definitions_df) <- tolower(names(definitions_df))
+
+  # Panama Reservoir Annual totals
+  panama_res <-
+    df %>%
+    dplyr::select(
+      year, model_run,
+      Reservoir_25_Content, Link_571_Flow, Link_572_Flow,
+      Link_617_Flow, Link_618_Flow, Link_573_Flow
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -year),
+        as.numeric)
+    ) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(
+      Reservoir_25_Content_avg  = mean(Reservoir_25_Content),
+      Reservoir_25_Content_min  = min(Reservoir_25_Content),
+      Reservoir_25_Content_max  = max(Reservoir_25_Content),
+      Link_571_Flow             = sum(Link_571_Flow),
+      Link_572_Flow             = sum(Link_572_Flow),
+      Link_617_Flow             = sum(Link_617_Flow),
+      Link_618_Flow             = sum(Link_618_Flow),
+      Link_573_Flow             = sum(Link_573_Flow)
+      # COB_Panama_contents_Avg         = mean(Reservoir_25_Content),
+      # COB_Panama_contents_Min         = min(Reservoir_25_Content),
+      # COB_Panama_contents_Max         = max(Reservoir_25_Content),
+      # BoulderWhiterock_ToPanama       = sum(Link_571_Flow),
+      # COBPanamaResWR_FromLeggett      = sum(Link_572_Flow),
+      # RecaptureGREPRelease_viaLeggett = sum(Link_617_Flow),
+      # PanamaRecapture_WWTPReuseWater  = sum(Link_618_Flow),
+      # COBPanama_ReusableRelease       = sum(Link_573_Flow),
+    ) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::mutate(
+      year  = as.numeric(year),
+      dict_join = dplyr::case_when(
+        grepl("Reservoir_25_Content", name) ~ "Reservoir_25_Content",
+        TRUE                                ~ name
+        )
+      ) %>%
+    dplyr::left_join(
+      dplyr::select(definitions_df, name, units),
+      by = c("dict_join" = "name")
+    ) %>%
+    dplyr::mutate(
+      year  = as.numeric(year),
+      title = dplyr::case_when(
+        name == "Reservoir_25_Content_avg" ~ "Boulder Pool Contents in Panama Reservoir (Average Annual)",
+        name == "Reservoir_25_Content_min" ~ "Boulder Pool Contents in Panama Reservoir (Min Annual)",
+        name == "Reservoir_25_Content_max" ~ "Boulder Pool Contents in Panama Reservoir (Max Annual)",
+        name == "Link_571_Flow"            ~ "COB Boulder & Whiterock Ditch to COB Panama (Total Annual) (Link 571)",
+        name == "Link_572_Flow"            ~ "COB Panama Reservoir Water Right From Leggett (Total Annual) (Link 572)",
+        name == "Link_617_Flow"            ~ "Reusable Water to Panama Res from Leggett Ditch (Total Annual) (Link 617)",
+        name == "Link_618_Flow"            ~ "COB Recapture of WWTP Reusable Water (Total Annual) (Link 618)",
+        name == "Link_573_Flow"            ~ "COB Panama Res Reusable Release (Total Annual) (Link 573)"
+        # name == "COB_Panama_contents_Avg"         ~ "Boulder Pool Contents in Panama Reservoir (Average Annual)",
+        # name == "COB_Panama_contents_Min"         ~ "Boulder Pool Contents in Panama Reservoir (Min Annual)",
+        # name == "COB_Panama_contents_Max"         ~ "Boulder Pool Contents in Panama Reservoir (Max Annual)",
+        # name == "BoulderWhiterock_ToPanama"       ~ "COB Boulder & Whiterock Ditch to COB Panama (Total Annual) (Link 571)",
+        # name == "COBPanamaResWR_FromLeggett"      ~ "COB Panama Reservoir Water Right From Leggett (Total Annual) (Link 572)",
+        # name == "RecaptureGREPRelease_viaLeggett" ~ "Reusable Water to Panama Res from Leggett Ditch (Total Annual) (Link 617)",
+        # name == "PanamaRecapture_WWTPReuseWater"  ~ "COB Recapture of WWTP Reusable Water (Total Annual) (Link 618)",
+        # name == "COBPanama_ReusableRelease"       ~ "COB Panama Res Reusable Release (Total Annual) (Link 573)"
+      )
+    ) %>%
+    dplyr::select(-dict_join)
+
+
+  return(panama_res)
+}
+
 process_res_water_type <- function(
     df,
     definitions_df,
@@ -44,28 +294,28 @@ process_res_water_type <- function(
     dplyr::mutate(
       description = factor(description)
     )
-    # dplyr::mutate(
-    #   description = dplyr::case_when(
-    #     name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
-    #     TRUE                                    ~ description
-    #   ),
-    #   name = dplyr::case_when(
-    #     name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
-    #     TRUE                                    ~ name
-    #   ),
-    #   parameter = dplyr::case_when(
-    #     name == "COB_Total_Boulder_Res_Storage" ~ "Flow",
-    #     TRUE                                    ~ name
-    #   ),
-    #   units = dplyr::case_when(
-    #     name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
-    #     TRUE                                    ~ units
-    #   )
-    # ) %>%
-    # dplyr::mutate(
-    #   date = start_date + floor(as.numeric(end_date - start_date))/2
-    # )
-    #
+  # dplyr::mutate(
+  #   description = dplyr::case_when(
+  #     name == "COB_Total_Boulder_Res_Storage" ~ "COB Total Boulder Res Storage",
+  #     TRUE                                    ~ description
+  #   ),
+  #   name = dplyr::case_when(
+  #     name == "COB_Total_Boulder_Res_Storage" ~ "DataObject_1_Flow + DataObject_29_Flow",
+  #     TRUE                                    ~ name
+  #   ),
+  #   parameter = dplyr::case_when(
+  #     name == "COB_Total_Boulder_Res_Storage" ~ "Flow",
+  #     TRUE                                    ~ name
+  #   ),
+  #   units = dplyr::case_when(
+  #     name == "DataObject_1_Flow + DataObject_29_Flow" ~ "Flow (af)",
+  #     TRUE                                    ~ units
+  #   )
+  # ) %>%
+  # dplyr::mutate(
+  #   date = start_date + floor(as.numeric(end_date - start_date))/2
+  # )
+  #
 
   # factor(res_water_type$description)
   # res_water_type$description %>% unique()
@@ -86,6 +336,8 @@ process_res_water_type <- function(
 
   return(res_water_type)
 }
+
+
 process_wittemyer_qm_ts <- function(
     df,
     mod_run
