@@ -3058,12 +3058,16 @@ for(z in 1:nrow(base_mods)) {
         # group by Year & ModelRun to calculate values by group & year
         group_by(year, ModelRun) %>%
         # sum the sources by year
-        summarize(COB_Laf_GREP_contents = mean(Reservoir_21_Content),
+        summarize(
+          COB_Laf_GREP_contents = mean(Reservoir_21_Content),
                   Boulder_GREP_contents = mean(DataObject_31_Flow),
                   Lafayette_GREP_contents = mean(DataObject_32_Flow),
-                  LafayetteFlowToGREP = sum(Link_587_Flow), BoulderExchangeToGREP = sum(Link_588_Flow),
-                  BoulderReleaseGREP = sum(DataObject_37_Flow), LafayetteReleaseGREP = sum(DataObject_38_Flow),
-                  SBC_ISF = sum(Link_350_Flow))
+                  LafayetteFlowToGREP = sum(Link_587_Flow),
+          BoulderExchangeToGREP = sum(Link_588_Flow),
+                  BoulderReleaseGREP = sum(DataObject_37_Flow),
+          LafayetteReleaseGREP = sum(DataObject_38_Flow),
+                  SBC_ISF = sum(Link_350_Flow)
+                  )
       # # faster way to do this (but it doesn't adjust column names)
       # summarise(across(Link_447_Flow:Link_406_Flow, sum))
       grep_qm_timeseries_list[[i]]
@@ -3099,7 +3103,8 @@ for(z in 1:nrow(base_mods)) {
                     "City of Lafayette GREP Contents (Average Annual)",
                     "Lafayette Flow To GREP (Total Annual)",
                     "Boulder Exchange To GREP (Total Annual)",
-                    "Boulder Releases from GREP (Total Annual)", "Lafayette Releases from GREP (Total Annual)",
+                    "Boulder Releases from GREP (Total Annual)",
+                    "Lafayette Releases from GREP (Total Annual)",
                     "South Boulder Creek Instream Flow (Total Annual)")
     n_site_list <- length(site_list)
     #color_list <- brewer.pal(4, "Set1")

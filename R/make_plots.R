@@ -1,3 +1,140 @@
+make_instream_flow_tbl <- function(
+    df,
+    core_size = 0.65,
+    col_size  = 0.65,
+    row_size  = 0.65
+) {
+
+  # summarise instream flows data for table
+  sub_df <-
+    df %>%
+    dplyr::group_by(model_run) %>%
+    tidyr::pivot_wider(
+      id_cols     = c(model_run, year),
+      names_from  = "name",
+      values_from = "output"
+    ) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::mutate(
+      Upper_ISF_binary = dplyr::if_else(Annual_Upper_ISF_Shortage_af < 0, 1, 0),
+      Lower_ISF_binary = dplyr::if_else(Annual_Lower_ISF_Shortage_af < 0, 1, 0)
+    ) %>%
+    dplyr::summarise(
+      'Lower ISF Shortage (mean)'        = round(mean(Annual_Lower_ISF_Shortage_af), 1),
+      'Lower ISF Shortage (min)'         = round(min(Annual_Lower_ISF_Shortage_af), 1),
+      'Lower ISF Shortage Years (count)' = sum(Lower_ISF_binary)
+    )
+
+  # set theme
+  tt <-
+    gridExtra::ttheme_default(
+      core    = list(
+        fg_params = list(cex = core_size)
+      ),
+      colhead = list(fg_params=list(cex = col_size)),
+      rowhead = list(fg_params=list(cex = row_size))
+    )
+
+  # Instream flow table
+  tbl <- gridExtra::tableGrob(
+    sub_df,
+    theme = tt,
+    rows  = NULL
+  )
+
+  # add grid around the headers
+  tbl <- gtable::gtable_add_grob(
+    tbl,
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+    t     = 1,
+    l     = 1,
+    r     = ncol(tbl)
+  )
+
+  # add box around the first column of data
+  tbl <- gtable::gtable_add_grob(
+    tbl,
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+    t     = 1,
+    b     = nrow(tbl),
+    l     = 1,
+    r     = 1
+  )
+
+  # add box around the second model run of data
+  tbl <- gtable::gtable_add_grob(
+    tbl,
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
+    t     = 1,
+    b     = nrow(tbl),
+    l     = 2,
+    r     = 4
+  )
+
+  return(tbl)
+
+}
+
+make_instream_flow_plot <- function(
+    df,
+    site,
+    units,
+    title_size,
+    xaxis_size
+) {
+
+  # set y axis limits as needed
+  if(abs(min(df$output)) >  abs(max(df$output))) {
+
+    ylimits = c(round_by(min(df$output), by = -5000), 0)
+
+    # message(paste0("ylimits: ", list(as.character(ylimits))))
+
+  } else {
+
+    if(max(df$output) == 0) {
+
+      ylimits = c(0, round_by(max(df$output), by = 5000, buffer = 5000))
+
+    } else {
+
+      ylimits = c(0, round_by(max(df$output), by = 1000, buffer = 500))
+
+    }
+
+    # message(paste0("ylimits: ", list(as.character(ylimits))))
+
+  }
+
+  # seq(min(ylimits), max(ylimits), by = max(abs(min(ylimits)), abs(max(ylimits)))/10)
+
+  # plot instream flow calculations
+  plt <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = year, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = paste0(units),
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::scale_y_continuous(limits = ylimits
+                                # breaks = seq(min(ylimits), max(ylimits), by = 1000)
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(plt)
+
+}
+
 make_grep_analysis_plot <- function(
     df,
     site,
@@ -818,7 +955,7 @@ make_reuse_water_exchange_plots <- function(
     df,
     plot_title,
     ylab_title,
-    yaxis_max,
+    ymax,
     title_size,
     xaxis_size
 ) {
@@ -826,14 +963,17 @@ make_reuse_water_exchange_plots <- function(
   reuse_plot <-
     df %>%
     ggplot2::ggplot(
-      ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
+      ggplot2::aes(x = year, y = value, color = model_run, linetype = model_run)
+      # ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
     ) +
     ggplot2::geom_line() +
-    ggplot2::ylim(0, yaxis_max) +
+    ggplot2::ylim(0, ymax) +
     ggplot2::labs(
-      title = plot_title,
-      x     = "Water Year",
-      y     = ylab_title
+      title    = plot_title,
+      x        = "Water Year",
+      y        = ylab_title,
+      color    = "Model run",
+      linetype = "Model run"
     ) +
     ggplot2::theme_bw() +
     ggplot2::theme(
@@ -848,7 +988,7 @@ make_reuse_water_exchange_plots <- function(
 make_mass_balance_plot <- function(
     df,
     plot_title,
-    yaxis_max,
+    ymax,
     title_size,
     xaxis_size
 ) {
@@ -856,15 +996,17 @@ make_mass_balance_plot <- function(
   mass_bal_plot <-
     df %>%
     ggplot2::ggplot(
-      # ggplot2::aes(x = year, y = value, color = model_run, linetype = model_run)
-      ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
+      ggplot2::aes(x = year, y = value, color = model_run, linetype = model_run)
+      # ggplot2::aes(x = year, y = value, color = `Model run`, linetype = `Model run`)
     ) +
     ggplot2::geom_line() +
-    ggplot2::ylim(0, yaxis_max) +
+    ggplot2::ylim(0, ymax) +
     ggplot2::labs(
-      title = plot_title,
-      x     = "Water Year",
-     y     = "Flow (af)"
+      title   = plot_title,
+      x       = "Water Year",
+     y        = "Flow (af)",
+     color    = "Model run",
+     linetype = "Model run"
      ) +
     ggplot2::theme_bw() +
     ggplot2::theme(
@@ -886,14 +1028,18 @@ make_drought_response_plot <- function(
 
   drought_response_plot <-
     df %>%
-    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::ggplot(aes(x = year, y = value, color = model_run, linetype = model_run)) +
+    # ggplot2::ggplot(aes(x = year, y = value, color = `Model run`, linetype = `Model run`)) +
     ggplot2::geom_line() +
     ggplot2::theme_bw() +
     ggplot2::labs(
-      title = plot_name,
-      x     = "Water Year",
-      y     = ylab_title
+      title    = plot_name,
+      x        = "Water Year",
+      y        = ylab_title,
+      color    = "Model run",
+      linetype = "Model run"
     ) +
+    ggplot2::scale_y_continuous(limits = c(0, 5), breaks = seq(0, 5, by = 1))
     ggplot2::theme(
       plot.title         = ggplot2::element_text(size = title_size),
       axis.title         = ggplot2::element_text(size = xaxis_size),
@@ -915,7 +1061,8 @@ make_psi_plot <- function(
 
   psi_plot <-
     df %>%
-    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::ggplot(aes(x = year, y = value, color = model_run,  linetype = model_run)) +
+    # ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
     ggplot2::geom_line() +
     ggplot2::geom_hline(yintercept = 0.40, linetype="solid", color="red") +
     ggplot2::geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
@@ -923,9 +1070,11 @@ make_psi_plot <- function(
     ggplot2::geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
     ggplot2::theme_bw() +
     ggplot2::labs(
-      title = plot_name,
-      x     = "Water Year",
-      y     = ylab_title
+      title    = plot_name,
+      x        = "Water Year",
+      y        = ylab_title,
+      color    = "Model run",
+      linetype = "Model run"
     ) +
     ggplot2::theme(
       plot.title = element_text(size = title_size),
@@ -948,14 +1097,17 @@ make_res_content_plot <- function(
 
   res_content_plot <-
     df %>%
-    ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
+    ggplot2::ggplot(aes(x = year, y = value, color = model_run,  linetype = model_run)) +
+    # ggplot2::ggplot(aes(x = year, y = value, color = `Model run`,  linetype = `Model run`)) +
     ggplot2::geom_line() +
     ggplot2::geom_hline(yintercept = storage_max_hline, color = "black", size = 0.25) +
     ggplot2::theme_bw() +
     ggplot2::labs(
       title = plot_name,
       x     = "Water Year",
-      y     = ylab_title
+      y     = ylab_title,
+      color    = "Model run",
+      linetype = "Model run"
     ) +
     ggplot2::theme(
       plot.title = element_text(size = title_size),
@@ -995,7 +1147,7 @@ make_drought_table <- function(
   # add box around the column headers
   tbl_temp <- gtable::gtable_add_grob(
     tbl_temp,
-    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
     t = 1,
     l = 1,
     r = ncol(tbl_temp)
@@ -1003,7 +1155,7 @@ make_drought_table <- function(
   # add box around the first model run of data
   tbl_temp <- gtable::gtable_add_grob(
     tbl_temp,
-    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
     t = 2,
     b = nrow(tbl_temp),
     l = 1,
@@ -1013,7 +1165,7 @@ make_drought_table <- function(
   # add box around the second model run of data
   tbl_temp <- gtable::gtable_add_grob(
     tbl_temp,
-    grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+    grobs = grid::rectGrob(gp = grid::gpar(fill = NA, lwd = 2)),
     t = 7,
     b = nrow(tbl_temp),
     l = 1,

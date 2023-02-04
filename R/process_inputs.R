@@ -1,3 +1,174 @@
+process_instream_flow <- function(
+    df,
+    isf_df,
+    upper_dry_oct_apr_cfs = NULL,
+    upper_dry_may_sep_cfs = NULL,
+    lower_dry_oct_apr_cfs = NULL,
+    lower_dry_may_sep_cfs = NULL,
+    upper_avg_oct_apr_cfs = NULL,
+    upper_avg_may_sep_cfs = NULL,
+    lower_avg_oct_apr_cfs = NULL,
+    lower_avg_may_sep_cfs = NULL
+) {
+  # df <- outputs
+  # isf_df <- isf_year_type
+  # upper_dry_oct_apr_cfs = NULL
+  # upper_dry_may_sep_cfs = NULL
+  # lower_dry_oct_apr_cfs = NULL
+  # lower_dry_may_sep_cfs = NULL
+  # upper_avg_oct_apr_cfs = NULL
+  # upper_avg_may_sep_cfs = NULL
+  # lower_avg_oct_apr_cfs = NULL
+  # lower_avg_may_sep_cfs = NULL
+
+  # if all are NULL, provide default values
+  if(all(
+    is.null(upper_dry_oct_apr_cfs), is.null(upper_dry_may_sep_cfs),
+    is.null(lower_dry_oct_apr_cfs), is.null(lower_dry_may_sep_cfs),
+    is.null(upper_avg_oct_apr_cfs), is.null(upper_avg_may_sep_cfs),
+    is.null(lower_avg_oct_apr_cfs), is.null(lower_avg_may_sep_cfs)
+  )) {
+
+    # defaults
+    upper_dry_oct_apr_cfs = 5
+    upper_dry_may_sep_cfs = 7
+    lower_dry_oct_apr_cfs = 1.5
+    lower_dry_may_sep_cfs = 2.5
+    upper_avg_oct_apr_cfs = 7
+    upper_avg_may_sep_cfs = 10
+    lower_avg_oct_apr_cfs = 2.5
+    lower_avg_may_sep_cfs = 4
+
+  }
+
+  # list of function inputs
+  input_args <- as.list(environment())
+
+  # check function arguments for missing/invalid inputs
+  arg_lst <- check_args(
+    arg_lst = input_args,
+    ignore  = c("df", "isf_df"),
+    f       = "any"
+  )
+
+  # if invalid/missing arguments found, stop function
+  if(!is.null(arg_lst)) {
+
+    stop(arg_lst)
+
+  }
+
+  # TODO make as input to parent function
+  flow_yeartype <- yeartype_lst(
+    upper_dry_oct_apr_cfs = upper_dry_oct_apr_cfs,
+    upper_dry_may_sep_cfs = upper_dry_may_sep_cfs,
+    lower_dry_oct_apr_cfs = lower_dry_oct_apr_cfs,
+    lower_dry_may_sep_cfs = lower_dry_may_sep_cfs,
+    upper_avg_oct_apr_cfs = upper_avg_oct_apr_cfs,
+    upper_avg_may_sep_cfs = upper_avg_may_sep_cfs,
+    lower_avg_oct_apr_cfs = lower_avg_oct_apr_cfs,
+    lower_avg_may_sep_cfs = lower_avg_may_sep_cfs
+  )
+
+  # column names of ISF data
+  # isf_cols <- names(isf_df)[!names(isf_df) %in% c("wyqm", "days_in_qm")]
+
+  # do instream flow calculations, summarise to annual
+  instream_flow <-
+    df %>%
+    # dplyr::filter(model_run %in% mod_run) %>%
+    dplyr::select(
+      year, qm, wyqm, start_date, end_date, model_run,
+      Link_350_Flow,
+      Link_61_Flow, Link_63_Flow, DataObject_35_Flow, Reservoir_21_Content,
+      DataObject_34_Flow, DataObject_33_Flow, Link_42_Flow
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -year, -qm, -wyqm, -start_date, -end_date),
+        as.numeric)
+    ) %>%
+    dplyr::left_join(
+      tidyr::pivot_longer(
+        isf_df,
+        cols      = c(-wyqm, -days_in_qm),
+        names_to  = "isf_name",
+        values_to = "isf_value"
+      ),
+      by = "wyqm"
+    ) %>%
+    dplyr::mutate(
+      GREP_Upper_ISF_cfs     = dplyr::if_else(
+        DataObject_33_Flow == 350,
+        (Link_350_Flow/days_in_qm)/1.9835,
+        (Link_42_Flow/days_in_qm)/1.9835
+      ),
+      GREP_Upper_ISF_target  = dplyr::if_else(
+        isf_value == "DRY",
+        dplyr::if_else(qm <= 28, flow_yeartype$upper_dry_oct_apr_cfs, flow_yeartype$upper_dry_may_sep_cfs),
+        dplyr::if_else(qm <= 28, flow_yeartype$upper_avg_oct_apr_cfs, flow_yeartype$upper_avg_may_sep_cfs)
+      ),
+      Upper_ISF_shortage_cfs = dplyr::if_else(
+        (GREP_Upper_ISF_cfs >= GREP_Upper_ISF_target),
+        0,
+        round(GREP_Upper_ISF_cfs - GREP_Upper_ISF_target, 1)
+      ),
+      GREP_Lower_ISF_cfs     = dplyr::if_else(
+        DataObject_34_Flow == 63,
+        (Link_63_Flow/days_in_qm)/1.9835,
+        (Link_61_Flow/days_in_qm)/1.9835
+      ),
+      GREP_Lower_ISF_target  = dplyr::if_else(
+        isf_value == "DRY",
+        dplyr::if_else(qm <= 28, flow_yeartype$lower_dry_oct_apr_cfs, flow_yeartype$lower_dry_may_sep_cfs),
+        dplyr::if_else(qm <= 28, flow_yeartype$lower_avg_oct_apr_cfs, flow_yeartype$lower_avg_may_sep_cfs)
+      ),
+      Lower_ISF_shortage_cfs = dplyr::if_else(
+        (GREP_Lower_ISF_cfs >= GREP_Lower_ISF_target),
+        0,
+        round(GREP_Lower_ISF_cfs - GREP_Lower_ISF_target, 1)
+      ),
+      Upper_ISF_shortage_af  = Upper_ISF_shortage_cfs * 1.9835 * days_in_qm,
+      Lower_ISF_shortage_af  = Lower_ISF_shortage_cfs * 1.9835 * days_in_qm
+    ) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::summarise(
+      Annual_Upper_ISF_Shortage_af = sum(Upper_ISF_shortage_af, na.rm = TRUE),
+      Annual_Lower_ISF_Shortage_af = sum(Lower_ISF_shortage_af, na.rm = TRUE),
+      COB_Laf_GREP_contents        = mean(Reservoir_21_Content, na.rm = TRUE)
+    ) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::mutate(
+      year  = as.numeric(year),
+      title = dplyr::case_when(
+        name == "Annual_Upper_ISF_Shortage_af"    ~ "Annual Upper ISF Shortage (AF)",
+        name == "Annual_Lower_ISF_Shortage_af"    ~ "Annual Lower ISF Shortage (AF)",
+        name == "COB_Laf_GREP_contents"           ~ "Boulder + Lafayette GREP Contents (Annual Average)"
+        # name == "Annual_Upper_ISF_Shortage_af"    ~ "Annual_Upper_ISF_Shortage_af",
+        # name == "Annual_Lower_ISF_Shortage_af"    ~ "Annual_Lower_ISF_Shortage_af",
+        # name == "COB_Laf_GREP_contents"           ~ "Boulder + Lafayette GREP Contents (Annual Average)"
+      ),
+      units = dplyr::case_when(
+        name == "Annual_Upper_ISF_Shortage_af"    ~ "Flow (af)",
+        name == "Annual_Lower_ISF_Shortage_af"    ~ "Flow (af)",
+        name == "COB_Laf_GREP_contents"           ~ "Contents (af)"
+      ),
+      ylim  = dplyr::case_when(
+        name == "Annual_Upper_ISF_Shortage_af"    ~ -4500,
+        name == "Annual_Lower_ISF_Shortage_af"    ~ -4500,
+        name == "COB_Laf_GREP_contents"           ~ 7000
+      )
+    )
+
+  return(instream_flow)
+
+}
+
 process_grep_analysis <- function(
     df
 ) {
