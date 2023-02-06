@@ -1,146 +1,120 @@
-# Purpose: Read raw data from City of Boulder's CRAM model quarter monthly output ('OutputSheet')
-# and Annual output ('OutputAnnualSummary') to produce a variety of summary data & graphics.
-# Author: Bill Szafranski
-# Date: 8/17/2021
+# function takes in 2 model datasets to compare and outputs plots into a new output folder
+# Author: Angus Watters
 
 # clear R working directory
-rm(list = ls())
-cat("\014")
+# rm(list = ls())
 
-library(tidyverse)
-#source("f_my_ecdf.R")  # code to calculate empirical CDF
-# library(plotly)
-library(lubridate)
-library(gridExtra)
-# library(scales)
-library(RColorBrewer)
-library(gtable)
-library(grid)
+# library(tidyverse)
+# library(lubridate)
+# library(gridExtra)
+# library(RColorBrewer)
+# library(gtable)
+# library(grid)
 
 source("R/make_lookup.R")
 source("R/make_plots.R")
-source("R/process_output.R")
-source("R/process_isf.R")
-source("R/process_quota.R")
-source("R/process_drought_index.R")
-source("R/process_annual_summary.R")
-source("R/process_mass_balance.R")
-source("R/process_reuse_water_exchange.R")
-source("R/process_cbt_quota.R")
-source("R/process_res_reuse_storage.R")
 source("R/parse_directory.R")
-source("R/process_cbt_windygap.R")
 source("R/process_inputs.R")
-
-# process_cbt_quota
 source("R/utils.R")
 
-# TODO function inputs
-# 1. path to directory with model comp files
-# 2. base model file name
-# 3. comp model file name
-# 4. QM date conversion dataframe ("data-raw/qm_to_date_conversion.csv")
-# 5. Instream flow CFS values
-# 6. Output save path/directory
+
+# # model_dir
+# base_path  <- "D:/cob/latest/latest"
+#
+# # base and comp model names
+# base_model <- "0000.DRRP_WEP_2023_003_ID1_Base"
+# comp_model <- "0101.DRRP_WEP_2023_003_ID1_2050_18pctOutdoorReduction_7525"
+#
+# # read in the quarter-monthly to date converter
+# date_df    <- readr::read_csv("data-raw/qm_to_date_conversion.csv")
+#
+# # borrowing on or off input
+# borrow     <- "off"
+#
+# # instream flow values
+# upper_dry_oct_apr_cfs = NULL
+# upper_dry_may_sep_cfs = NULL
+# lower_dry_oct_apr_cfs = NULL
+# lower_dry_may_sep_cfs = NULL
+# upper_avg_oct_apr_cfs = NULL
+# upper_avg_may_sep_cfs = NULL
+# lower_avg_oct_apr_cfs = NULL
+# lower_avg_may_sep_cfs = NULL
+#
+# # start and end years
+# start_year = 1915
+# end_year   = 2014
+#
+# # title and axis font sizes
+# title_size = 10
+# xaxis_size = 9
+#
+# # path to create output directory and save plots into
+# save_path  <- "D:/cob/latest/latest"
+#
+# get_model_comp(
+#   base_path  = "D:/cob/latest/latest",
+#   base_model = "0000.DRRP_WEP_2023_003_ID1_Base",
+#   comp_model = "0101.DRRP_WEP_2023_003_ID1_2050_18pctOutdoorReduction_7525",
+#   date_df    = date_df,
+#   borrow     = "off",
+#   start_year = 1915,
+#   end_year   = 2014,
+#   title_size = 10,
+#   xaxis_size = 9,
+#   save_path  = "D:/cob/latest/latest"
+# )
 
 
-base_folder <- "D:/cob/latest/latest"
-# base_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
+get_model_comp <- function(
+  base_path,
+  base_model,
+  comp_model,
+  date_df,
+  borrow,
+  upper_dry_oct_apr_cfs = NULL,
+  upper_dry_may_sep_cfs = NULL,
+  lower_dry_oct_apr_cfs = NULL,
+  lower_dry_may_sep_cfs = NULL,
+  upper_avg_oct_apr_cfs = NULL,
+  upper_avg_may_sep_cfs = NULL,
+  lower_avg_oct_apr_cfs = NULL,
+  lower_avg_may_sep_cfs = NULL,
+  start_year = 1915,
+  end_year   = 2014,
+  title_size = 10,
+  xaxis_size = 9,
+  save_path
+) {
 
-# info on model files
-model_dirs  <- parse_directory(base_folder = base_folder)
-# tmp <- model_dirs$file[5]
-# str_split(tmp, "_")
-# tmp <- model_dirs$file[59]
-# str_split(tmp, "_")
-# set plot parameters
-title_size = 10
-xaxis_size = 9
+  # info on model files
+  model_dirs  <- parse_directory(base_folder = base_path)
 
-# model number/climate
-mod_number <- "Base"
+  # path to ISF data
+  isf_path <-
+    model_dirs %>%
+    dplyr::filter(grepl("ISF", file)) %>%
+    .$path
 
-# model version
-mod_version <- "055d"
+  # path to Quota data
+  quota_path <-
+    model_dirs %>%
+    dplyr::filter(grepl("Quota", file)) %>%
+    .$path
 
-start_year = 1915
-end_year   = 2014
+  # base model paths
+  base_mods <-
+    model_dirs %>%
+    dplyr::filter(
+      grepl(base_model, file)
+      # grepl("DRRP_DroughtPlan_2020_055a_ID1_7525", file)
+    )
 
-# model_folder <- "latest"
-model_folder <- "D:/cob/latest/latest"
-# model_folder <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob/latest"
-
-save_path   <- "D:/cob/latest/latest"
-
-# borrowing on or off input
-borrow = "off"
-
-# save_path   <- "C:/Users/angus/OneDrive - Lynker Technologies/Desktop/cob"
-device_type <- ".png"     # .png, .pdf
-
-# TODO plot 6 inputs
-upper_dry_oct_apr_cfs = 5
-upper_dry_may_sep_cfs = 7
-lower_dry_oct_apr_cfs = 1.5
-lower_dry_may_sep_cfs = 2.5
-upper_avg_oct_apr_cfs = 7
-upper_avg_may_sep_cfs = 10
-lower_avg_oct_apr_cfs = 2.5
-lower_avg_may_sep_cfs = 4
-
-# read in the quarter-monthly to date converter
-qm_convert <- readr::read_csv("data-raw/qm_to_date_conversion.csv")
-
-# path to ISF data
-isf_path <-
-  model_dirs %>%
-  dplyr::filter(grepl("ISF", file)) %>%
-  .$path
-
-# path to Quota data
-quota_path <-
-  model_dirs %>%
-  dplyr::filter(grepl("Quota", file)) %>%
-  .$path
-
-# tmp2 <-
-# base_mods <-
-#   model_dirs %>%
-#   dplyr::filter(
-#     model_id %in% c("ID1"),
-#     model_version %in% mod_version,
-#     # extra_info %in% c("7525"),
-#     model_num %in% mod_number,
-#     # grepl("055c_3143_ID1_7525", file),
-#     output == "OutputSheet"
-#   ) %>%
-#   dplyr::group_by(model_version, model_id, model_num) %>%
-#   dplyr::slice(1) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::filter(
-#     name != "Quota",
-#     model_num == "7525"
-#     ) %>%
-#   dplyr::mutate(
-#     prefix = substr(file, 1, 4)
-#     # prefix = substr(file, 28, 31)
-#   ) %>%
-#   dplyr::select(prefix, model_version, model_id, model_num, extra_info, path)
-base_mods <-
-  model_dirs %>%
-  dplyr::filter(
-    # grepl("DRRP_DroughtPlan_2020_055a_ID1_7525", file)
-    grepl("0000.DRRP_WEP_2023_003_ID1_Base", file)
-    # output == "OutputSheet"
-  )
-
-comp_mods <-
-  model_dirs %>%
-  dplyr::filter(
-      # grepl("DRRP_DroughtPlan_2020_055a_ID2_7525", file)
-      # grepl("0101.DRRP_WEP_2023_003_ID1_2050_7525_18pctOutdoorReduction", file)
-        grepl("0101.DRRP_WEP_2023_003_ID1_2050_18pctOutdoorReduction_7525", file)
-      # output == "OutputSheet"
+  # comparison model paths
+  comp_mods <-
+    model_dirs %>%
+    dplyr::filter(
+      grepl(comp_model, file)
     )
 
   # base model annual summary
@@ -187,7 +161,7 @@ comp_mods <-
     )
   )
 
-  # output folder
+  # output folder name
   output_folder <- paste0(
     base_out$model_id, "-", base_out$model_num, "-",  gsub("v", "", base_out$model_version),
     ifelse(base_out$extra_info != "", paste0("-", base_out$extra_info), ""),
@@ -195,9 +169,6 @@ comp_mods <-
     comp_out$model_id,  "-", comp_out$model_num, "-",  gsub("v", "", comp_out$model_version),
     ifelse(comp_out$extra_info != "", paste0("-", comp_out$extra_info), "")
   )
-
-  # Folder to hold all outputs/plots from this script
-  # output_dir <- paste0(save_path, "/", output_folder)
 
   # Folder to hold all outputs/plots from this script
   output_dir <- paste0(save_path, "/output")
@@ -237,15 +208,15 @@ comp_mods <-
 
   # names of columns to select from ISF dataset
   model_id_subs <- c(
-                    paste0(base_out$model_id, base_out$model_num),
-                    paste0(comp_out$model_id, comp_out$model_num)
-                    )
+    paste0(base_out$model_id, base_out$model_num),
+    paste0(comp_out$model_id, comp_out$model_num)
+  )
 
   # Load ISF data and select columns of interest
   isf_year_type <-
     process_isf(
       isf_path = isf_path
-      ) %>%
+    ) %>%
     dplyr::select(wyqm, days_in_qm, dplyr::contains(model_id_subs))
 
   # ***********************
@@ -258,16 +229,16 @@ comp_mods <-
       model_ids  = model_id_subs,
       start_year = start_year,
       end_year   = end_year
-      )
+    )
 
   quota <-
     dplyr::bind_rows(
       dplyr::mutate(quota, scenario = scenario_name[1]),
       dplyr::mutate(quota, scenario = scenario_name[2])
-      ) %>%
+    ) %>%
     dplyr::mutate(
       model_run = factor(scenario, levels = c(rev(scenario_name)))
-      ) %>%
+    ) %>%
     dplyr::select(-scenario)
 
   # ********************
@@ -281,7 +252,7 @@ comp_mods <-
     df         = quota,
     title_size = title_size,
     xaxis_size = xaxis_size
-    )
+  )
 
   # list of model dataframes
   mod_lst <- list(base_out, comp_out)
@@ -291,7 +262,7 @@ comp_mods <-
 
     outs <- process_output(
       file_df = mod_lst[[y]],
-      date_df = qm_convert
+      date_df = date_df
     ) %>%
       dplyr::mutate(
         model_run = scenario_name[y]
@@ -333,7 +304,7 @@ comp_mods <-
     process_drought_metrics(
       summary_path = mod_summary_lst[[y]]$path,
       model_run    = scenario_name[y]
-      )
+    )
 
   }) %>%
     dplyr::bind_rows()
@@ -341,7 +312,7 @@ comp_mods <-
   # Drought response table
   tbl_temp <- make_drought_table(
     df = data_annual_lst
-    )
+  )
 
   # *****************
   # ---- Plot 1A ----
@@ -363,61 +334,61 @@ comp_mods <-
     dplyr::bind_rows() %>%
     dplyr::mutate(
       model_run = factor(model_run, levels = c(rev(scenario_name)))
-      )
+    )
 
   # drought plots to loop over
   drought_plot_lst <- na.omit(unique(drought_index$title))
 
   drought_plots <- lapply(1:length(drought_plot_lst), function(z) {
 
-      extract_df <-
-        drought_index %>%
-        dplyr::filter(title == drought_plot_lst[z])
-        # dplyr::rename("Model run" = model_run)
+    extract_df <-
+      drought_index %>%
+      dplyr::filter(title == drought_plot_lst[z])
+    # dplyr::rename("Model run" = model_run)
 
-      message(paste0("Plotting: ", drought_plot_lst[z]))
+    message(paste0("Plotting: ", drought_plot_lst[z]))
 
-      # Drought response plot
-      if(drought_plot_lst[z] == "Drought Response Level") {
+    # Drought response plot
+    if(drought_plot_lst[z] == "Drought Response Level") {
 
-        dplot <- make_drought_response_plot(
-                    df         = extract_df,
-                    plot_name  = drought_plot_lst[z],
-                    ylab_title = unique(extract_df$ylabs),
-                    title_size = title_size,
-                    xaxis_size = xaxis_size
-                  )
+      dplot <- make_drought_response_plot(
+        df         = extract_df,
+        plot_name  = drought_plot_lst[z],
+        ylab_title = unique(extract_df$ylabs),
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
 
-      }
+    }
 
-      # Drought response plot
-      if(drought_plot_lst[z] == "Projected Storage Index") {
+    # Drought response plot
+    if(drought_plot_lst[z] == "Projected Storage Index") {
 
-        dplot <- make_psi_plot(
-                      df         = extract_df,
-                      plot_name  = drought_plot_lst[z],
-                      ylab_title = unique(extract_df$ylabs),
-                      title_size = title_size,
-                      xaxis_size = xaxis_size
-                    )
+      dplot <- make_psi_plot(
+        df         = extract_df,
+        plot_name  = drought_plot_lst[z],
+        ylab_title = unique(extract_df$ylabs),
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
 
-      }
+    }
 
-      # Drought response plot
-      if(!drought_plot_lst[z] %in% c("Projected Storage Index", "Drought Response Level")) {
+    # Drought response plot
+    if(!drought_plot_lst[z] %in% c("Projected Storage Index", "Drought Response Level")) {
 
-        dplot <- make_res_content_plot(
-          df                = extract_df,
-          plot_name         = drought_plot_lst[z],
-          ylab_title        = unique(extract_df$ylabs),
-          storage_max_hline = unique(extract_df$storage_max),
-          title_size        = title_size,
-          xaxis_size        = xaxis_size
-        )
+      dplot <- make_res_content_plot(
+        df                = extract_df,
+        plot_name         = drought_plot_lst[z],
+        ylab_title        = unique(extract_df$ylabs),
+        storage_max_hline = unique(extract_df$storage_max),
+        title_size        = title_size,
+        xaxis_size        = xaxis_size
+      )
 
-      }
+    }
 
-      dplot
+    dplot
 
   }) %>%
     stats::setNames(c(drought_plot_lst))
@@ -439,7 +410,7 @@ comp_mods <-
       right  = "",
       bottom = ""
     )
-    )
+  )
 
   # *****************
   # ---- Plot 1B ----
@@ -454,7 +425,7 @@ comp_mods <-
     process_mass_balance_source() %>%
     dplyr::mutate(
       model_run = factor(model_run, levels = c(rev(scenario_name)))
-      )
+    )
 
   # extra sites of interest (Not CBT_Inflow or WindyGap_)
   mass_source_sites <- unique(mass_bal_source$name)[!grepl("CBT_Inflow|WindyGap_Inflow", unique(mass_bal_source$name))]
@@ -467,7 +438,7 @@ comp_mods <-
     extract_df <-
       mass_bal_source %>%
       dplyr::filter(name == mass_source_sites[i])
-      # dplyr::rename("Model run" = model_run)
+    # dplyr::rename("Model run" = model_run)
 
     mass_bal_plot <- make_mass_balance_plot(
       df         = extract_df,
@@ -499,8 +470,8 @@ comp_mods <-
       right  = "",
       left   = "",
       bottom = ""
-      )
     )
+  )
 
 
   # *****************
@@ -530,7 +501,7 @@ comp_mods <-
     extract_df <-
       mass_bal_pipe %>%
       dplyr::filter(name == mass_pipe_sites[i])
-      # dplyr::rename("Model run" = model_run)
+    # dplyr::rename("Model run" = model_run)
 
     mass_bal_plot <- make_mass_balance_plot(
       df         = extract_df,
@@ -585,7 +556,7 @@ comp_mods <-
     extract_df <-
       reuse_water_exchange %>%
       dplyr::filter(name == reuse_sites[i])
-      # dplyr::rename("Model run" = model_run)
+    # dplyr::rename("Model run" = model_run)
 
     reuse_plot <- make_reuse_water_exchange_plots(
       df         = extract_df,
@@ -650,7 +621,7 @@ comp_mods <-
       quota_df       = quota,
       definitions_df = definitions,
       borrow         = borrow
-      ) %>%
+    ) %>%
     dplyr::mutate(
       model_run = factor(model_run, levels = c(rev(scenario_name))),
       year = as.numeric(year)
@@ -778,7 +749,7 @@ comp_mods <-
       dplyr::mutate(
         year = as.numeric(year)
 
-        )
+      )
 
     # refactor levels
     lvls <- c(unique(extract_df$Type)[!grepl("Reusable Water", unique(extract_df$Type))], "Reusable Water")
@@ -1028,21 +999,21 @@ comp_mods <-
     filename = paste0(model_comp_dir, "/", "2j. Boulder Reservoir Inflow Outflow - Time Series Plot 5x2.png"),
     width    = 14,
     height   = 8,
-      gridExtra::grid.arrange(
-        cbt_wg_lst[["Decree_75_Flow"]],
-        cbt_wg_lst[["Link_499_Flow"]],
-        cbt_wg_lst[["Link_451_Flow"]],
-        cbt_wg_lst[["Link_452_Flow"]],
-        cbt_wg_lst[["Link_375_Flow"]],
-        cbt_wg_lst[["Link_457_Flow"]],
-        cbt_wg_lst[["Link_454_Flow"]],
-        cbt_wg_lst[["DataObject_29_Flow"]],
-        cbt_wg_lst[["DataObject_1_Flow"]],
-        cbt_wg_lst[["DataObject_2_Flow"]],
-        nrow   = 5,
-        top    = "2j. Boulder Reservoir Inflow Outflow - Time Series Plot",
-        right  = ""
-      )
+    gridExtra::grid.arrange(
+      cbt_wg_lst[["Decree_75_Flow"]],
+      cbt_wg_lst[["Link_499_Flow"]],
+      cbt_wg_lst[["Link_451_Flow"]],
+      cbt_wg_lst[["Link_452_Flow"]],
+      cbt_wg_lst[["Link_375_Flow"]],
+      cbt_wg_lst[["Link_457_Flow"]],
+      cbt_wg_lst[["Link_454_Flow"]],
+      cbt_wg_lst[["DataObject_29_Flow"]],
+      cbt_wg_lst[["DataObject_1_Flow"]],
+      cbt_wg_lst[["DataObject_2_Flow"]],
+      nrow   = 5,
+      top    = "2j. Boulder Reservoir Inflow Outflow - Time Series Plot",
+      right  = ""
+    )
   )
 
   # *****************
@@ -1221,7 +1192,7 @@ comp_mods <-
     process_wg_wittemyer_ts() %>%
     dplyr::mutate(
       model_run = factor(model_run, levels = c(scenario_name))
-      )
+    )
 
   # unique model runs to plot
   witt_ts_sites <- unique(wittemyer_ts$name)
@@ -1317,13 +1288,13 @@ comp_mods <-
 
   # monthly wittemyer contents plot (qm)
   wittemyer_cont_qm_plot <- make_wittemyer_ts_plot(
-                                  df         = wittemyer_pond_qm,
-                                  site       = unique(wittemyer_pond_qm$title)[1],
-                                  ymax       = 2000,
-                                  title_size = title_size,
-                                  xaxis_size = xaxis_size,
-                                  timescale  = "qm"
-                                )
+    df         = wittemyer_pond_qm,
+    site       = unique(wittemyer_pond_qm$title)[1],
+    ymax       = 2000,
+    title_size = title_size,
+    xaxis_size = xaxis_size,
+    timescale  = "qm"
+  )
 
   # add average monthly (qm) content plot to list of other wittemyer content plots
   wittemyer_cont_yr_lst$Witt_monthly_avg_contents <- wittemyer_cont_qm_plot
@@ -1413,7 +1384,7 @@ comp_mods <-
     process_res_water_type(
       definitions_df = definitions,
       qm_filter      = 24
-      )
+    )
 
   # unique model runs to plot
   runs_lst <- unique(res_water_type$model_run)
@@ -1459,111 +1430,111 @@ comp_mods <-
   # ---- Plot 4B ----
   # *****************
 
-    panama_res <-
-      outputs %>%
-      process_panama_res(definitions_df = definitions) %>%
-      dplyr::mutate(
-        model_run = factor(model_run, levels = c(scenario_name))
-      )
-
-    # dplyr::group_by(name)
-    # panama_res %>%
-    #     # dplyr::group_by(name) %>%
-    #     dplyr::group_split() %>%
-    #     # purrr::set_names(unlist(dplyr::group_keys(panama_res)))
-    #     stats::setNames(unlist(group_keys(panama_res)))
-
-    # list of site names
-    names_lst <- unique(panama_res$name)
-
-    # plot 4B, loop through each site and plot
-    panama_res_lst <- lapply(1:length(names_lst), function(i) {
-
-      # filter down to site
-      extract_df <-
-        panama_res %>%
-        dplyr::filter(name == names_lst[i])
-
-      message(paste0("Plotting: Panama Reservoir Annual - ", names_lst[i]))
-
-      # make plot
-      panama_res_plot <-
-        make_panama_res_plot(
-          df         = extract_df,
-          site       = unique(extract_df$title),
-          units      = unique(extract_df$units),
-          ymax       = 6000,
-          title_size = title_size,
-          xaxis_size = xaxis_size
-        )
-
-      panama_res_plot
-
-    }) %>%
-      stats::setNames(c(names_lst))
-
-    # names(panama_res_lst)
-
-    # save plot 4B
-    ggplot2::ggsave(
-      filename = paste0(model_comp_dir, "/", "4b. Panama Reservoir Annual Time Series Plots 4x2.png"),
-      width    = 14,
-      height   = 8,
-      gridExtra::grid.arrange(
-        panama_res_lst[["Reservoir_25_Content_avg"]],
-        panama_res_lst[["Reservoir_25_Content_min"]],
-        panama_res_lst[["Reservoir_25_Content_max"]],
-        panama_res_lst[["Link_571_Flow"]],
-        panama_res_lst[["Link_572_Flow"]],
-        panama_res_lst[["Link_617_Flow"]],
-        panama_res_lst[["Link_618_Flow"]],
-        panama_res_lst[["Link_573_Flow"]],
-        nrow   = 4,
-        top    = "4b. Panama Reservoir Annual Time Series Plots",
-        right  = ""
-      )
+  panama_res <-
+    outputs %>%
+    process_panama_res(definitions_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
     )
+
+  # dplyr::group_by(name)
+  # panama_res %>%
+  #     # dplyr::group_by(name) %>%
+  #     dplyr::group_split() %>%
+  #     # purrr::set_names(unlist(dplyr::group_keys(panama_res)))
+  #     stats::setNames(unlist(group_keys(panama_res)))
+
+  # list of site names
+  names_lst <- unique(panama_res$name)
+
+  # plot 4B, loop through each site and plot
+  panama_res_lst <- lapply(1:length(names_lst), function(i) {
+
+    # filter down to site
+    extract_df <-
+      panama_res %>%
+      dplyr::filter(name == names_lst[i])
+
+    message(paste0("Plotting: Panama Reservoir Annual - ", names_lst[i]))
+
+    # make plot
+    panama_res_plot <-
+      make_panama_res_plot(
+        df         = extract_df,
+        site       = unique(extract_df$title),
+        units      = unique(extract_df$units),
+        ymax       = 6000,
+        title_size = title_size,
+        xaxis_size = xaxis_size
+      )
+
+    panama_res_plot
+
+  }) %>%
+    stats::setNames(c(names_lst))
+
+  # names(panama_res_lst)
+
+  # save plot 4B
+  ggplot2::ggsave(
+    filename = paste0(model_comp_dir, "/", "4b. Panama Reservoir Annual Time Series Plots 4x2.png"),
+    width    = 14,
+    height   = 8,
+    gridExtra::grid.arrange(
+      panama_res_lst[["Reservoir_25_Content_avg"]],
+      panama_res_lst[["Reservoir_25_Content_min"]],
+      panama_res_lst[["Reservoir_25_Content_max"]],
+      panama_res_lst[["Link_571_Flow"]],
+      panama_res_lst[["Link_572_Flow"]],
+      panama_res_lst[["Link_617_Flow"]],
+      panama_res_lst[["Link_618_Flow"]],
+      panama_res_lst[["Link_573_Flow"]],
+      nrow   = 4,
+      top    = "4b. Panama Reservoir Annual Time Series Plots",
+      right  = ""
+    )
+  )
 
   # *****************
   # ---- Plot 4C ----
   # *****************
 
-    # Panama Reservoir Analysis
-    panama_res_qm <-
-      outputs %>%
-      process_panama_res_qm(definitions_df = definitions) %>%
-      dplyr::mutate(
-        model_run = factor(model_run, levels = c(scenario_name))
+  # Panama Reservoir Analysis
+  panama_res_qm <-
+    outputs %>%
+    process_panama_res_qm(definitions_df = definitions) %>%
+    dplyr::mutate(
+      model_run = factor(model_run, levels = c(scenario_name))
+    )
+
+  # list of site names
+  names_lst <- unique(panama_res_qm$name)
+
+  # plot 4C, loop through each site and plot
+  panama_res_qm_lst <- lapply(1:length(names_lst), function(i) {
+
+    # filter down to site
+    extract_df <-
+      panama_res_qm %>%
+      dplyr::filter(name == names_lst[i])
+
+    message(paste0("Plotting: Panama Reservoir QM - ", names_lst[i]))
+
+    # make plot
+    panama_qm_plot <-
+      make_panama_res_qm_plot(
+        df         = extract_df,
+        site       = unique(extract_df$description),
+        units      = unique(extract_df$units),
+        ymax       = 6000,
+        title_size = title_size,
+        xaxis_size = xaxis_size
       )
 
-    # list of site names
-    names_lst <- unique(panama_res_qm$name)
+    panama_qm_plot
 
-    # plot 4C, loop through each site and plot
-    panama_res_qm_lst <- lapply(1:length(names_lst), function(i) {
-
-      # filter down to site
-      extract_df <-
-        panama_res_qm %>%
-        dplyr::filter(name == names_lst[i])
-
-      message(paste0("Plotting: Panama Reservoir QM - ", names_lst[i]))
-
-      # make plot
-      panama_qm_plot <-
-        make_panama_res_qm_plot(
-          df         = extract_df,
-          site       = unique(extract_df$description),
-          units      = unique(extract_df$units),
-          ymax       = 6000,
-          title_size = title_size,
-          xaxis_size = xaxis_size
-        )
-
-      panama_qm_plot
-
-    }) %>%
-      stats::setNames(c(names_lst))
+  }) %>%
+    stats::setNames(c(names_lst))
 
   # save plot 4C
   save_plot(
@@ -1756,7 +1727,7 @@ comp_mods <-
   names(instream_flow_lst) <- c(names_lst[1:length(names_lst)-1],
                                 "Drought Response Level",
                                 names_lst[length(names_lst)]
-                                )
+  )
 
   # save plot 6A
   save_plot(
@@ -1779,7 +1750,7 @@ comp_mods <-
       core_size = 1,
       col_size  = 1,
       row_size  = 1
-      )
+    )
 
   # save table 6B
   ggplot2::ggsave(
@@ -1796,6 +1767,4 @@ comp_mods <-
     )
   )
 
-  # ************************
-  # ---- final outputs  ----
-  # ************************
+}

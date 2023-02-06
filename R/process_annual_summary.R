@@ -3,11 +3,6 @@ process_annual_summary <- function(
     date_df,
     verbose = TRUE
 ) {
-  file_df <- model_dirs[2,]
-  file_df
-  date_df     = date_convert
-  # verbose     = TRUE
-  # rm(file_df, out, out2, y, verbose, date_df, output_path, model_ver, model_id, model_num)
 
   # path to file
   output_path <- file_df$path

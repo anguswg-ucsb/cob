@@ -79,9 +79,9 @@ cc_new_params <- function() {
 
 }
 
-cbt_new_params <- function() {
+cbt_new_params_on <- function() {
   def_df <- data.frame(
-    Name       = c("Decree75_QM1_4", "Decree75_QM25_48", "COB_CBT_allotment",
+    Name       = c("Decree75_QM1_24", "Decree75_QM25_48", "COB_CBT_allotment",
                    "COB_CBT_TotalUse", "COB_CBT_Unused", "COB_CBT_NormalUse",
                    "COB_CBT_BorrowedWinter", "COB_CBT_YeartoYearDebt"
     ),
@@ -96,7 +96,7 @@ cbt_new_params <- function() {
 
 }
 
-cbt_new_params2 <- function() {
+cbt_new_params_off <- function() {
   def_df <- data.frame(
     Name       = c("Decree75_QM5_24", "Decree75_QM25_48", "Decree75_QM1_4",
                    "COB_CBT_allotment", "COB_CBT_Used", "COB_CBT_Unused"

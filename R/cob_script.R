@@ -3611,9 +3611,12 @@ for(z in 1:nrow(base_mods)) {
         group_by(year, ModelRun) %>%
         select(!!!syms(site_selection)) %>%
         left_join(., ISF_year_type, by = "wyqm") %>%
-        mutate(GREP_Upper_ISF_cfs = if_else(DataObject_33_Flow == 350,
-                                            (Link_350_Flow / DaysInQM / 1.9835),
-                                            (Link_42_Flow / DaysInQM / 1.9835))) %>%
+        mutate(GREP_Upper_ISF_cfs = if_else(
+          DataObject_33_Flow == 350,
+          (Link_350_Flow / DaysInQM / 1.9835),
+          (Link_42_Flow / DaysInQM / 1.9835)
+          )
+          ) %>%
         #select(-Link_350_Flow, -Link_61_Flow, -Link_63_Flow) %>%
         mutate(GREP_Upper_ISF_target = if_else(!!sym(ISF_list[i]) == "DRY",
                                                ifelse(qm <= 28, UPPER_DRY_OCTAPR_CFS, UPPER_DRY_MAYSEP_CFS),      #if yes (DRY)
@@ -3625,9 +3628,11 @@ for(z in 1:nrow(base_mods)) {
                                             (Link_63_Flow / DaysInQM / 1.9835),
                                             (Link_61_Flow / DaysInQM / 1.9835))) %>%
         #select(-Link_350_Flow, -Link_61_Flow, -Link_63_Flow) %>%
-        mutate(GREP_Lower_ISF_target = if_else(!!sym(ISF_list[i]) == "DRY",
-                                               ifelse(qm <= 28, LOWER_DRY_OCTAPR_CFS, LOWER_DRY_MAYSEP_CFS),      #if yes (DRY)
-                                               ifelse(qm <= 28, LOWER_AVG_OCTAPR_CFS, LOWER_AVG_MAYSEP_CFS))) %>% # if no (AVG+)
+        mutate(GREP_Lower_ISF_target = if_else(
+                          !!sym(ISF_list[i]) == "DRY",
+                          ifelse(qm <= 28, LOWER_DRY_OCTAPR_CFS, LOWER_DRY_MAYSEP_CFS),      #if yes (DRY)
+                          ifelse(qm <= 28, LOWER_AVG_OCTAPR_CFS, LOWER_AVG_MAYSEP_CFS))
+                          ) %>% # if no (AVG+)
         mutate(Lower_ISF_shortage_cfs = if_else((GREP_Lower_ISF_cfs >= GREP_Lower_ISF_target),
                                                 0,
                                                 round(GREP_Lower_ISF_cfs - GREP_Lower_ISF_target, 1))) %>%
