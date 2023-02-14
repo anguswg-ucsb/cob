@@ -933,6 +933,66 @@ process_boulder_res <- function(
 
   return(boulder_res)
 }
+
+process_all_cob_res <- function(
+    df,
+    definitions_df
+) {
+  # df <- outputs
+  # definitions_df <- definitions
+  # All COB Reservoirs
+
+  # make definition column names lowercase
+  names(definitions_df) <- tolower(names(definitions_df))
+
+  # WG Boulder Res
+  cob_res <-
+    df %>%
+    dplyr::select(
+      year, qm, wyqm, start_date, end_date, model_run,
+      Reservoir_3_Content, Reservoir_1_Content, DataObject_29_Flow, DataObject_1_Flow
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(-model_run, -year, -qm, -wyqm, -start_date, -end_date),
+        as.numeric)
+    ) %>%
+    dplyr::mutate(
+      COB_Total_Boulder_Res_Storage = DataObject_29_Flow + DataObject_1_Flow,
+      Total_Upper_Storage           = Reservoir_3_Content + Reservoir_1_Content,
+      date                          = start_date + floor(as.numeric(end_date - start_date))/2
+    ) %>%
+    # dplyr::group_by(year, model_run)
+    tidyr::pivot_longer(
+      cols      = c(-model_run, -year, -qm, -wyqm, -start_date, -end_date, -date),
+      names_to  = "name",
+      values_to = "output"
+    ) %>%
+    dplyr::left_join(
+      definitions_df,
+      by = "name"
+    ) %>%
+    dplyr::mutate(
+      # year  = as.numeric(year),
+      title = dplyr::case_when(
+        name == "Reservoir_3_Content"             ~  "Barker Reservoir",
+        name == "Reservoir_1_Content"             ~  "NBC Reservoirs",
+        name == "DataObject_29_Flow"              ~  "Boulder Windy Gap",
+        name == "DataObject_1_Flow"               ~  "Boulder CBT",
+        name == "COB_Total_Boulder_Res_Storage"   ~  "Boulder Total Storage Boulder Res",
+        name == "Total_Upper_Storage"             ~  "Barker + NBC Reservoir Storage"
+      ),
+      units = dplyr::case_when(
+        name == "COB_Total_Boulder_Res_Storage"   ~  "Contents (af)",
+        name == "Total_Upper_Storage"             ~  "Contents (af)",
+        TRUE                                      ~ units
+      )
+
+    )
+
+  return(cob_res)
+}
+
 process_cbt_quota_borrow_on <- function(
     df,
     definitions_df,
@@ -940,7 +1000,9 @@ process_cbt_quota_borrow_on <- function(
 ) {
   # quota_df <- quota
   # df <- outputs
-
+  # quota_df       = quota
+  # definitions_df = definitions
+  # borrow         = borrow
   cbt_qm24 <-
     df %>%
     dplyr::select(year, model_run, qm, wyqm, start_date, end_date,
@@ -1012,6 +1074,10 @@ process_cbt_quota_borrow_on <- function(
       year              = as.character(year),
       COB_CBT_allotment = quota * 21174
     )
+
+  # cbt_extract %>%
+  #   dplyr::ungroup() %>%
+  #   dplyr::distinct(model_run, year, .keep_all = T)
 
   cbt_extract <-
     cbt_extract24 %>%
@@ -1415,28 +1481,67 @@ process_cbt_quota <- function(
 # }
 
 process_cbt_quota_tbl <- function(
-    summary_df
+    summary_df,
+    borrow = "off"
 ) {
 
-  cbt_extract_tbl <-
-    summary_df %>%
-    dplyr::filter(name %in% c("COB_CBT_Used", "COB_CBT_Unused")) %>%
-    tidyr::pivot_wider(
-      id_cols     = c(year, model_run),
-      names_from  = name,
-      values_from = value
-    ) %>%
-    dplyr::group_by(model_run) %>%
-    dplyr::summarise(
-      'CBT Use (mean)'    = round(mean(COB_CBT_Used),0), 'CBT Use (min)' = min(COB_CBT_Used),
-      'CBT Use (max)'     = max(COB_CBT_Used),
-      'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0), 'Unused CBT (min)' = min(COB_CBT_Unused),
-      'Unused CBT (max)'  = max(COB_CBT_Unused)
-    ) %>%
-    dplyr::ungroup()
+  if(borrow == "off") {
+
+    # summary_df <- cbt_quota
+    cbt_extract_tbl <-
+      summary_df %>%
+      dplyr::filter(name %in% c("COB_CBT_Used", "COB_CBT_Unused")) %>%
+      tidyr::pivot_wider(
+        id_cols     = c(year, model_run),
+        names_from  = name,
+        values_from = value
+      ) %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::summarise(
+        'CBT Use (mean)'    = round(mean(COB_CBT_Used),0),
+        'CBT Use (min)'     = min(COB_CBT_Used),
+        'CBT Use (max)'     = max(COB_CBT_Used),
+        'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0),
+        'Unused CBT (min)'  = min(COB_CBT_Unused),
+        'Unused CBT (max)'  = max(COB_CBT_Unused)
+      ) %>%
+      dplyr::ungroup()
 
 
-  return(cbt_extract_tbl)
+    return(cbt_extract_tbl)
+
+
+  }
+
+  if(borrow == "on") {
+
+    # summary_df <- cbt_quota
+    cbt_extract_tbl <-
+      summary_df %>%
+      dplyr::filter(name %in% c("COB_CBT_TotalUse", "COB_CBT_Unused")) %>%
+      dplyr::group_by(model_run, year, name) %>%
+      dplyr::slice(1) %>%
+      tidyr::pivot_wider(
+        id_cols     = c(year, model_run),
+        names_from  = name,
+        values_from = value
+      ) %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::summarise(
+        'CBT Use (mean)'    = round(mean(COB_CBT_TotalUse),0),
+        'CBT Use (min)'     = min(COB_CBT_TotalUse),
+        'CBT Use (max)'     = max(COB_CBT_TotalUse),
+        'Unused CBT (mean)' = round(mean(COB_CBT_Unused),0),
+        'Unused CBT (min)'  = min(COB_CBT_Unused),
+        'Unused CBT (max)'  = max(COB_CBT_Unused)
+      ) %>%
+      dplyr::ungroup()
+
+
+    return(cbt_extract_tbl)
+
+
+  }
 
 }
 
@@ -1847,27 +1952,36 @@ process_mass_balance_pipeline <- function(df) {
   return(mass_bal_pipe)
 
 }
-
 process_drought_index <- function(
-    output_df,
-    model_run,
-    qm
+    df,
+    # model_run,
+    drought_qm
 ) {
-
+  # df = outputs
+  # model_run = scenario_name[y]
+  # qm        = 29
+  # rm(model_run)
   drought_indices <-
-    output_df %>%
-    dplyr::filter(model_run == !!model_run, qm == !!qm) %>%
-    dplyr::select(year, qm, Date = start_date, model_run, DataObject_15_Flow, DataObject_12_Flow, Reservoir_3_Content,
-                  Reservoir_1_Content, DataObject_1_Flow, Reservoir_12_Content,
-                  DataObject_13_Flow) %>%
-    dplyr::mutate(dplyr::across(c(-year, -qm, -Date, -model_run), as.numeric)) %>%
-    dplyr::mutate(
-      PSI = DataObject_15_Flow/100,
-
+    df %>%
+    dplyr::filter(qm == drought_qm) %>%
+    # dplyr::filter(model_run == !!model_run, qm == !!qm) %>%
+    dplyr::select(year, qm, Date = start_date, model_run,
+                  DataObject_15_Flow, DataObject_12_Flow, Reservoir_3_Content,
+                  Reservoir_1_Content, DataObject_1_Flow, Reservoir_12_Content, DataObject_13_Flow
     ) %>%
-    dplyr::mutate(PSI = DataObject_15_Flow/100) %>%
+    dplyr::mutate(dplyr::across(c(-year, -qm, -Date, -model_run), as.numeric)) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::mutate(
+      PSI                  = DataObject_15_Flow/100,
+      DroughtResponseLevel = dplyr::case_when(
+        DataObject_12_Flow == 0 | DataObject_12_Flow == 1 ~ 0,
+        TRUE                                              ~ DataObject_12_Flow - 1
+      ),
+      DroughtWatch         = ifelse(DataObject_12_Flow == 1, 1, 0)
+    ) %>%
     dplyr::rename(
-      DroughtResponseLevel         = DataObject_12_Flow,
+      # DroughtResponseLevel         = DataObject_12_Flow,
+      # DroughtResponseLevel_old     = DataObject_12_Flow,
       Barker_Res_Contents_af       = Reservoir_3_Content,
       NBC_Res_Contents_af          = Reservoir_1_Content,
       Boulder_Res_Contents_af      = DataObject_1_Flow,
@@ -1886,7 +2000,8 @@ process_drought_index <- function(
         name == "Barker_Res_Contents_af"  ~ "Barker Reservoir Contents",
         name == "NBC_Res_Contents_af"     ~ "NBC Reservoir Contents",
         name == "Upper_Storage_af"        ~ "Total Upper Reservoir Contents",
-        name == "Boulder_Res_Contents_af" ~ "COB Boulder Reservoir Contents"
+        name == "Boulder_Res_Contents_af" ~ "COB Boulder Reservoir Contents",
+        name == "DataObject_12_Flow"      ~ "Drought Watch"
         # name == "Predicted_Storage_af"    ~ "COB Boulder Reservoir Contents"
       ),
       ylabs = dplyr::case_when(
@@ -1903,10 +2018,66 @@ process_drought_index <- function(
         name == "Upper_Storage_af"        ~ 18204,
         name == "Boulder_Res_Contents_af" ~ 18204
       )
-    )
+    ) %>%
+    dplyr::ungroup()
 
   return(drought_indices)
 }
+
+process_drought_index_wide <- function(
+    df,
+    drought_qm
+) {
+
+  drought_indices <-
+    df %>%
+    dplyr::filter(qm == drought_qm) %>%
+    # dplyr::filter(model_run == !!model_run, qm == !!qm) %>%
+    dplyr::select(year, qm, Date = start_date, model_run,
+                  DataObject_15_Flow, DataObject_12_Flow, Reservoir_3_Content,
+                  Reservoir_1_Content, DataObject_1_Flow,
+                  Reservoir_12_Content, DataObject_13_Flow
+                  ) %>%
+    dplyr::mutate(dplyr::across(c(-year, -qm, -Date, -model_run), as.numeric)) %>%
+    dplyr::group_by(year, model_run) %>%
+    dplyr::mutate(
+      PSI                  = DataObject_15_Flow/100,
+      DroughtResponseLevel = dplyr::case_when(
+        DataObject_12_Flow == 0 | DataObject_12_Flow == 1 ~ 0,
+        TRUE                                              ~ DataObject_12_Flow - 1
+        ),
+      DroughtWatch         = ifelse(DataObject_12_Flow == 1, 1, 0)
+      ) %>%
+    dplyr::rename(
+      # DroughtResponseLevel         = DataObject_12_Flow,
+      DroughtResponseLevel_old     = DataObject_12_Flow,
+      Barker_Res_Contents_af       = Reservoir_3_Content,
+      NBC_Res_Contents_af          = Reservoir_1_Content,
+      Boulder_Res_Contents_af      = DataObject_1_Flow,
+      TotalBoulder_Res_Contents_af = Reservoir_12_Content
+    ) %>%
+    dplyr::mutate(
+      Upper_Storage_af = Barker_Res_Contents_af + NBC_Res_Contents_af,
+      year             = as.numeric(year)
+    ) %>%
+    dplyr::rename(Predicted_Storage_af = DataObject_13_Flow) %>%
+    dplyr::ungroup()
+
+  return(drought_indices)
+
+}
+
+
+# drght <-
+#   outputs %>%
+#   process_drought_index_wide(drought_qm = drought_qm)
+#
+# drght %>%
+#   process_drought_index_tables(
+#     mod_runs = scenario_name
+#   )
+
+
 # file_df is a row of a dataframe created from process_directory() function
 process_output <- function(
     file_df,

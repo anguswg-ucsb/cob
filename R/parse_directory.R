@@ -69,11 +69,14 @@ parse_directory = function(
       path = paste0(base_folder, "/", file)
     ) %>%
     dplyr::mutate(
-      extra_info = stringr::str_match(file, paste0(model_version, "(.*?)", model_id))[,2],
-      extra_info = dplyr::case_when(
-        extra_info == "_" ~ "",
-        TRUE              ~ gsub("_", "", extra_info)
-      )
+      # extra_info = stringr::str_match(file, paste0(model_version, "(.*?)", model_id))[,2],
+      extra_info = stringr::str_match(file, paste0(model_version, "(.*?)", output))[,2],
+      # extra_info = dplyr::case_when(
+      #   extra_info == "_" ~ "",
+      #   TRUE              ~ gsub("_", "", extra_info)
+      # ),
+      # extra_info = gsub(".", "", extra_info, fixed = T)
+      extra_info = paste0(model_version, gsub(".", "", extra_info, fixed = T))
     ) %>%
     dplyr::relocate(name, year, model_version, model_id, model_num, output, plot_id, extra_info, base_folder, file, path) %>%
     dplyr::tibble()

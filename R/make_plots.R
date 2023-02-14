@@ -534,6 +534,47 @@ make_boulder_res_plot <- function(
   return(boulder_res_plot)
 
 }
+make_all_cob_res_plot <- function(df,
+                                  site,
+                                  units,
+                                  ymax = NA,
+                                  title_size,
+                                  xaxis_size) {
+  # i <- 1
+  # extract_df <-
+  #   all_cob_res %>%
+  #   dplyr::filter(name == all_cob_sites[i])
+  # df         = extract_df
+  # site       = unique(extract_df$title)[1]
+  # units      = unique(extract_df$units)[1]
+  # ymax       = NA
+  # title_size = title_size
+  # xaxis_size = xaxis_size
+  #
+  all_cob_res_plot <-
+    df %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(x = date, y = output, color = model_run, linetype = model_run)
+    ) +
+    ggplot2::ylim(0, ymax) +
+    ggplot2::labs(
+      title    = paste0(site),
+      y        = paste0(units),
+      x        = "Water year",
+      color    = "Model run",
+      linetype = "Model run"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = title_size),
+      axis.title = ggplot2::element_text(size = xaxis_size)
+    )
+
+  return(all_cob_res_plot)
+
+}
+
 
 make_wg_boulder_plot <- function(
     df,
@@ -697,7 +738,7 @@ make_cbt_quota_tbl2 <- function(
     gt::gt() %>%
     gt::tab_header(
       title    = gt::md("City of Boulder Annual C-BT Water Use"),
-      subtitle = gt::md(paste0(unique(df$model_run)[2], " vs. ",   unique(df$model_run)[1]))
+      subtitle = gt::md(paste0(unique(df$model_run)[1], " vs. ",   unique(df$model_run)[2]))
     )
 
   return(summary_tbl)
@@ -758,102 +799,204 @@ make_cbt_quota_tbl <- function(
 make_cbt_unused_plot <- function(
     df,
     mod_run,
+    borrow = borrow,
     title_size,
     xaxis_size
 ) {
 
-  cbt_comp_plot <-
-    ggplot2::ggplot() +
-    ggplot2::geom_bar(
-      data     = dplyr::filter(
-        df,
-        group == "CBT Summary",
-        Description == "COB Unused CBT Water",
-        model_run == mod_run
-      ),
-      # data = df,
-      ggplot2::aes(x = year, y = value, fill = Description),
-      position = "stack",
-      stat     = 'identity',
-      color    = "black",
-      size     = 0.05
-    ) +
-    # ggplot2::scale_fill_manual(values = "cornflowerblue") +
-    ggplot2::geom_line(
-      data     = dplyr::filter(
-        df,
-        group     == "Total CBT",
-        model_run == mod_run
-      ),
-      ggplot2::aes(x = year, y = value, color = name),
-      size = 0.75
-    ) +
-    ggplot2::ylim(-10000, 22000) +
-    ggplot2::scale_color_manual(values = "black") +
-    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
-    ggplot2::labs(
-      title = paste0(mod_run, ": CBT Water by Year"),
-      y = "Flow (af)",
-      x = "Water year"
-    ) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(
-      plot.title = ggplot2::element_text(size = title_size),
-      axis.title = ggplot2::element_text(size = xaxis_size)
-    )
 
-  return(cbt_comp_plot)
+  if(borrow == "off") {
 
+    cbt_comp_plot <-
+      ggplot2::ggplot() +
+      ggplot2::geom_bar(
+        data     = dplyr::filter(
+          df,
+          group == "CBT Summary",
+          Description == "COB Unused CBT Water",
+          model_run == mod_run
+        ),
+        # data = df,
+        ggplot2::aes(x = year, y = value, fill = Description),
+        position = "stack",
+        stat     = 'identity',
+        color    = "black",
+        size     = 0.05
+      ) +
+      # ggplot2::scale_fill_manual(values = "cornflowerblue") +
+      ggplot2::geom_line(
+        data     = dplyr::filter(
+          df,
+          group     == "Total CBT",
+          model_run == mod_run
+        ),
+        ggplot2::aes(x = year, y = value, color = name),
+        size = 0.75
+      ) +
+      ggplot2::ylim(-10000, 22000) +
+      ggplot2::scale_color_manual(values = "black") +
+      ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+      ggplot2::labs(
+        title = paste0(mod_run, ": CBT Water by Year"),
+        y = "Flow (af)",
+        x = "Water year"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+
+    return(cbt_comp_plot)
+  }
+
+  if(borrow == "on") {
+
+    cbt_comp_plot <-
+      ggplot2::ggplot() +
+      ggplot2::geom_bar(
+        data     = dplyr::filter(
+          df,
+          group == "CBT Summary",
+          # Description == "COB Unused CBT Water",
+          model_run == mod_run
+        ),
+        # data = df,
+        ggplot2::aes(x = year, y = value, fill = Description),
+        position = "stack",
+        stat     = 'identity',
+        color    = "black",
+        size     = 0.05
+      ) +
+      # ggplot2::scale_fill_manual(values = "cornflowerblue") +
+      ggplot2::geom_line(
+        data     = dplyr::filter(
+          df,
+          group     == "Total CBT",
+          model_run == mod_run
+        ),
+        ggplot2::aes(x = year, y = value, color = name),
+        size = 0.75
+      ) +
+      ggplot2::ylim(-10000, 22000) +
+      ggplot2::scale_color_manual(values = "black") +
+      ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+      ggplot2::labs(
+        title = paste0(mod_run, ": CBT Water by Year"),
+        y = "Flow (af)",
+        x = "Water year"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+
+    return(cbt_comp_plot)
+  }
 }
 
 make_cbt_used_plot <- function(
     df,
     mod_run,
+    borrow = "off",
     title_size,
     xaxis_size
 ) {
+  # i <- 1
+  #
+  #     df         = cbt_quota
+  #     mod_run    = cbt_quota_runs[i]
+  #     title_size = title_size
+  #     xaxis_size = xaxis_size
+  if(borrow == "off") {
 
-  cbt_comp_plot <-
-    ggplot2::ggplot() +
-    ggplot2::geom_bar(
-      data     = dplyr::filter(
-        df,
-        group == "CBT Summary",
-        Description == "COB Used CBT Water",
-        model_run == mod_run
-      ),
-      # data = df,
-      ggplot2::aes(x = year, y = value, fill = Description),
-      position = "stack",
-      stat     = 'identity',
-      color    = "black",
-      size     = 0.05
-    ) +
-    ggplot2::scale_fill_manual(values = "cornflowerblue") +
-    ggplot2::geom_line(
-      data     = dplyr::filter(
-        df,
-        group     == "Total CBT",
-        model_run == mod_run
-      ),
-      ggplot2::aes(x = year, y = value, color = name),
-      size = 0.75
-    ) +
-    ggplot2::ylim(NA, 22000) +
-    ggplot2::scale_color_manual(values = "black") +
-    ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
-    ggplot2::labs(
-      title = paste0(mod_run, ": CBT Water by Year"),
-      y = "Flow (af)",
-      x = "Water year"
-    ) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(
-      plot.title = ggplot2::element_text(size = title_size),
-      axis.title = ggplot2::element_text(size = xaxis_size)
-    )
+    cbt_comp_plot <-
+      ggplot2::ggplot() +
+      ggplot2::geom_bar(
+        data     = dplyr::filter(
+          df,
+          group == "CBT Summary",
+          Description == "COB Used CBT Water",
+          model_run == mod_run
+        ),
+        # data = df,
+        ggplot2::aes(x = year, y = value, fill = Description),
+        position = "stack",
+        stat     = 'identity',
+        color    = "black",
+        size     = 0.05
+      ) +
+      ggplot2::scale_fill_manual(values = "cornflowerblue") +
+      ggplot2::geom_line(
+        data     = dplyr::filter(
+          df,
+          group     == "Total CBT",
+          model_run == mod_run
+        ),
+        ggplot2::aes(x = year, y = value, color = name),
+        size = 0.75
+      ) +
+      ggplot2::ylim(NA, 22000) +
+      ggplot2::scale_color_manual(values = "black") +
+      ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+      ggplot2::labs(
+        title = paste0(mod_run, ": CBT Water by Year"),
+        y = "Flow (af)",
+        x = "Water year"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
 
-  return(cbt_comp_plot)
+    return(cbt_comp_plot)
+
+    }
+
+  if(borrow == "on") {
+
+    cbt_comp_plot <-
+      ggplot2::ggplot() +
+      ggplot2::geom_bar(
+        data     = dplyr::filter(
+          df,
+          group == "CBT Component",
+          model_run == mod_run
+        ),
+        # data = df,
+        ggplot2::aes(x = year, y = value, fill = Description),
+        position = "stack",
+        stat     = 'identity',
+        color    = "black",
+        size     = 0.05
+      ) +
+      ggplot2::geom_line(
+        data     = dplyr::filter(
+          df,
+          group     == "Total CBT",
+          model_run == mod_run
+        ),
+        ggplot2::aes(x = year, y = value, color = name),
+        size = 0.75
+      ) +
+      ggplot2::ylim(NA, 22000) +
+      ggplot2::scale_color_manual(values = "black") +
+      ggplot2::scale_x_continuous(limits = c(1914, 2016), breaks = seq(1915, 2015, by = 5)) +
+      ggplot2::labs(
+        title = paste0(mod_run, ": CBT Water by Year"),
+        y = "Flow (af)",
+        x = "Water year"
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = title_size),
+        axis.title = ggplot2::element_text(size = xaxis_size)
+      )
+    return(cbt_comp_plot)
+  }
+
 
 }
 make_cbt_component_plot <- function(
@@ -1039,7 +1182,8 @@ make_drought_response_plot <- function(
       color    = "Model run",
       linetype = "Model run"
     ) +
-    ggplot2::scale_y_continuous(limits = c(0, 5), breaks = seq(0, 5, by = 1))
+    ggplot2::scale_y_continuous(limits = c(3.5, 5), breaks = seq(3.5, 5, by = 0.5)) +
+    # ggplot2::scale_y_continuous(limits = c(0, 5), breaks = seq(0, 5, by = 1)) +
     ggplot2::theme(
       plot.title         = ggplot2::element_text(size = title_size),
       axis.title         = ggplot2::element_text(size = xaxis_size),
@@ -1051,9 +1195,416 @@ make_drought_response_plot <- function(
 
 }
 
+make_drought_index_tables <- function(
+    df,
+    mod_runs
+) {
+  # df <- drought_index
+  # mod_runs = scenario_name
+  # core_size = 0.65
+  # col_size = 0.65
+  # row_size = 0.65
+
+  triggers <-
+    df %>%
+    dplyr::select(-Date, -storage_max) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::filter(name %in% c("DroughtResponseLevel", "DataObject_12_Flow")) %>%
+    dplyr::mutate(
+      value = as.character(value),
+      lvl   = dplyr::case_when(
+        name == "DroughtResponseLevel" & value == "0" ~ "Level 0 Drought",
+        name == "DroughtResponseLevel" & value == "1" ~ "Level 1 Drought",
+        name == "DroughtResponseLevel" & value == "2" ~ "Level 2 Drought",
+        name == "DroughtResponseLevel" & value == "3" ~ "Level 3 Drought",
+        name == "DataObject_12_Flow"   & value == "1" ~ "Drought Watch"
+      )
+    ) %>%
+    # na.omit() %>%
+    dplyr::group_by(model_run, lvl) %>%
+    dplyr::tally() %>%
+    na.omit() %>%
+    dplyr::ungroup()
+
+  expected <- c("Level 0 Drought", "Level 1 Drought", "Level 2 Drought", "Level 3 Drought", "Drought Watch")
+  fill_rows <- expected[!expected %in% triggers$lvl]
+
+  if(length(fill_rows > 0)) {
+
+    triggers <-
+      triggers %>%
+      dplyr::bind_rows(
+        data.frame(
+          model_run = mod_runs,
+          lvl       = c(fill_rows),
+          n         = 0
+        )
+      ) %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::mutate(
+        lvl_order = dplyr::case_when(
+          lvl == "Level 0 Drought" ~ 1,
+          lvl == "Level 1 Drought" ~ 2,
+          lvl == "Level 2 Drought" ~ 3,
+          lvl == "Level 3 Drought" ~ 4,
+          lvl == "Drought Watch"   ~ 5
+        )
+      ) %>%
+      dplyr::arrange(lvl_order, .by_group = T)  %>%
+      dplyr::ungroup()
+      # dplyr::select(-lvl_order)
+
+  } else {
+
+    triggers <-
+      triggers %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::mutate(
+        lvl_order = dplyr::case_when(
+          lvl == "Level 0 Drought" ~ 1,
+          lvl == "Level 1 Drought" ~ 2,
+          lvl == "Level 2 Drought" ~ 3,
+          lvl == "Level 3 Drought" ~ 4,
+          lvl == "Drought Watch"   ~ 5
+        )
+      ) %>%
+      dplyr::arrange(lvl_order, .by_group = T)  %>%
+      dplyr::ungroup()
+      # dplyr::select(-lvl_order)
+
+  }
+
+  reliab <-
+    triggers %>%
+    dplyr::mutate(
+      lvl   = dplyr::case_when(
+        lvl == "Level 0 Drought" ~ "Level 1 (<=0.05)",
+        lvl == "Level 1 Drought" ~ "Level 2 (<=0.01)",
+        lvl == "Level 2 Drought" ~ "Level 3 (<=0.001)"
+      ),
+      n = n/100
+    ) %>%
+    na.omit() %>%
+    dplyr::mutate(
+      n = as.character(n)
+    ) %>%
+    tidyr::pivot_wider(
+      id_cols     = c(lvl),
+      names_from  = model_run,
+      values_from = n
+    ) %>%
+    stats::setNames(c("Name", mod_runs)) %>%
+    replace(is.na(.), "0")
+
+  triggers <-
+    triggers %>%
+    dplyr::mutate(
+      n = as.character(n)
+    ) %>%
+    tidyr::pivot_wider(
+      id_cols = c(lvl, lvl_order),
+      names_from  = model_run,
+      values_from = n
+    ) %>%
+    dplyr::arrange(lvl_order) %>%
+    dplyr::select(-lvl_order) %>%
+    stats::setNames(c("Name", mod_runs)) %>%
+    replace(is.na(.), "0")
+
+
+  headers <- data.frame(
+    name      = c("**** Drought Triggers ****", "**** Reliability Criteria ****"),
+    scenario1 = c("-----", "-----"),
+    scenario2 = c("-----", "-----")
+  ) %>%
+    stats::setNames(c("Name", mod_runs))
+
+  drought_tbl <-
+    dplyr::bind_rows(
+      headers[1, ],
+      triggers,
+      headers[2, ],
+      reliab
+    ) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = gt::md("Drought Reliability"),
+    )
+
+  return(drought_tbl)
+}
+
+make_drought_index_tgrob <- function(
+    df,
+    mod_runs,
+    core_size = 0.65,
+    col_size = 0.65,
+    row_size = 0.65
+) {
+  # df <- drought_index
+  # mod_runs = scenario_name
+  # core_size = 0.65
+  # col_size = 0.65
+  # row_size = 0.65
+
+  # summarize drought responses by tallying by each drought level, by model run
+  triggers <-
+    df %>%
+    dplyr::select(-Date, -storage_max) %>%
+    dplyr::group_by(model_run) %>%
+    dplyr::filter(name %in% c("DroughtResponseLevel", "DataObject_12_Flow")) %>%
+    dplyr::mutate(
+      value = as.character(value),
+      lvl   = dplyr::case_when(
+        name == "DroughtResponseLevel" & value == "0" ~ "Level 0 Drought",
+        name == "DroughtResponseLevel" & value == "1" ~ "Level 1 Drought",
+        name == "DroughtResponseLevel" & value == "2" ~ "Level 2 Drought",
+        name == "DroughtResponseLevel" & value == "3" ~ "Level 3 Drought",
+        name == "DataObject_12_Flow"   & value == "1" ~ "Drought Watch"
+      )
+    ) %>%
+    # na.omit() %>%
+    dplyr::group_by(model_run, lvl) %>%
+    dplyr::tally() %>%
+    na.omit() %>%
+    dplyr::ungroup()
+
+  # check if all expected drought levels are found in table
+  expected <- c("Level 0 Drought", "Level 1 Drought", "Level 2 Drought", "Level 3 Drought", "Drought Watch")
+  fill_rows <- expected[!expected %in% triggers$lvl]
+
+  # if missing some of the expected levels, inject them in and make there values 0, otherwise just tally up each category
+  if(length(fill_rows > 0)) {
+
+    triggers <-
+      triggers %>%
+      dplyr::bind_rows(
+        data.frame(
+          model_run = mod_runs,
+          lvl       = c(fill_rows),
+          n         = 0
+        )
+      ) %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::mutate(
+        lvl_order = dplyr::case_when(
+          lvl == "Level 0 Drought" ~ 1,
+          lvl == "Level 1 Drought" ~ 2,
+          lvl == "Level 2 Drought" ~ 3,
+          lvl == "Level 3 Drought" ~ 4,
+          lvl == "Drought Watch"   ~ 5
+        )
+      ) %>%
+      dplyr::arrange(lvl_order, .by_group = T)  %>%
+      dplyr::ungroup()
+      # dplyr::select(-lvl_order)
+
+  } else {
+
+    triggers <-
+      triggers %>%
+      dplyr::group_by(model_run) %>%
+      dplyr::mutate(
+        lvl_order = dplyr::case_when(
+          lvl == "Level 0 Drought" ~ 1,
+          lvl == "Level 1 Drought" ~ 2,
+          lvl == "Level 2 Drought" ~ 3,
+          lvl == "Level 3 Drought" ~ 4,
+          lvl == "Drought Watch"   ~ 5
+        )
+      ) %>%
+      dplyr::arrange(lvl_order, .by_group = T)  %>%
+      dplyr::ungroup()
+      # dplyr::select(-lvl_order)
+
+  }
+
+  # organize reliability table
+  reliab <-
+    triggers %>%
+    dplyr::mutate(
+      lvl   = dplyr::case_when(
+        lvl == "Level 0 Drought" ~ "Level 1 (<=0.05)",
+        lvl == "Level 1 Drought" ~ "Level 2 (<=0.01)",
+        lvl == "Level 2 Drought" ~ "Level 3 (<=0.001)"
+      ),
+      n = n/100
+    ) %>%
+    na.omit() %>%
+    dplyr::mutate(
+      n = as.character(n)
+    ) %>%
+    tidyr::pivot_wider(
+      id_cols     = c(lvl),
+      names_from  = model_run,
+      values_from = n
+    ) %>%
+    stats::setNames(c("Name", mod_runs)) %>%
+    replace(is.na(.), "0")
+
+  # organize triggers table
+  triggers <-
+    triggers %>%
+    dplyr::mutate(
+      n = as.character(n)
+    ) %>%
+    tidyr::pivot_wider(
+      id_cols = c(lvl, lvl_order),
+      names_from  = model_run,
+      values_from = n
+    ) %>%
+    dplyr::arrange(lvl_order) %>%
+    dplyr::select(-lvl_order) %>%
+    stats::setNames(c("Name", mod_runs)) %>%
+    replace(is.na(.), "0")
+
+  # headers to put into table
+  headers <- data.frame(
+    name      = c("**** Drought Triggers ****", "**** Reliability Criteria ****"),
+    scenario1 = c("-----", "-----"),
+    scenario2 = c("-----", "-----")
+  ) %>%
+    stats::setNames(c("Name", mod_runs))
+
+  # bind rows into a table
+  drought_tbl <-
+    dplyr::bind_rows(
+      headers[1, ],
+      triggers,
+      headers[2, ],
+      reliab
+    )
+
+    # table settings
+    tt <-
+      gridExtra::ttheme_default(
+        core    = list(
+          fg_params = list(cex = core_size)
+        ),
+        colhead = list(fg_params=list(cex = col_size)),
+        rowhead = list(fg_params=list(cex = row_size))
+      )
+
+    # Table 2
+    tbl_temp <- gridExtra::tableGrob(
+      drought_tbl,
+      theme = tt,
+      rows  = NULL
+    )
+
+  return(tbl_temp)
+}
+
+make_drought_index_tables2 <- function(
+    df,
+    mod_runs,
+    type = "gt",
+    core_size = 0.65,
+    col_size = 0.65,
+    row_size = 0.65
+) {
+  # df <- drought_index
+  # df <- drght
+  # mod_runs <- scenario_name
+
+  drought_trigger_results <- matrix(NA, nrow = 5, ncol = 2)
+
+  for (i in 1:length(mod_runs)){
+    drought_trigger_results[1, i] <- length(filter(df, df$DroughtResponseLevel==0 & model_run==mod_runs[i])$DroughtResponseLevel)
+    drought_trigger_results[2, i] <- length(filter(df, df$DroughtResponseLevel==1 & model_run==mod_runs[i])$DroughtResponseLevel)
+    drought_trigger_results[3, i] <- length(filter(df, df$DroughtResponseLevel==2 & model_run==mod_runs[i])$DroughtResponseLevel)
+    drought_trigger_results[4, i] <- length(filter(df, df$DroughtResponseLevel==3 & model_run==mod_runs[i])$DroughtResponseLevel)
+    drought_trigger_results[5, i] <- length(filter(df, df$DroughtResponseLevel_old==1 & model_run==mod_runs[i])$DroughtResponseLevel_old)
+
+
+  }
+  # Group this into a tibble
+  settings1_temp <- tibble(Name=c("Level 0 Drought", "Level 1 Drought", "Level 2 Drought", "Level 3 Drought", "Drought Watch"),
+                           Scenario1 = drought_trigger_results[,1],
+                           Scenario2 = drought_trigger_results[,2])
+
+
+  # add the relevant subtitle
+  heading1_temp <- tibble(Name=NA, Scenario1=NA, Scenario2=NA)
+  heading1_temp[1, 1] <- "**** Drought Triggers ****"
+  heading1_temp[1, 2] <- "-----"
+  heading1_temp[1, 3] <- "-----"
+
+  # add the relevant subtitle
+  heading2_temp <- tibble(Name=NA, Scenario1=NA, Scenario2=NA)
+  heading2_temp[1, 1] <- "**** Reliability Criteria ****"
+  heading2_temp[1, 2] <- "-----"
+  heading2_temp[1, 3] <- "-----"
+
+
+  ## reliability
+  drought_trigger_reliability <- matrix(NA, nrow = 3, ncol = 2)
+  for (i in 1:length(mod_runs)){
+    drought_trigger_reliability[1, i] <- length(filter(df, df$DroughtResponseLevel==1 & model_run==mod_runs[i])$DroughtResponseLevel)/100
+    drought_trigger_reliability[2, i] <- length(filter(df, df$DroughtResponseLevel==2 & model_run==mod_runs[i])$DroughtResponseLevel)/100
+    drought_trigger_reliability[3, i] <- length(filter(df, df$DroughtResponseLevel==3 & model_run==mod_runs[i])$DroughtResponseLevel)/100
+  }
+
+  # Group this into a tibble
+  settings2_temp <- tibble(Name=c("Level 1 (<=0.05)", "Level 2 (<=0.01)", "Level 3 (<=0.001)"),
+                           Scenario1 = drought_trigger_reliability[,1],
+                           Scenario2 = drought_trigger_reliability[,2])
+
+  # Group the triggers, reliability & subheaders
+  settings_drought <- rbind(heading1_temp, settings1_temp, heading2_temp, settings2_temp)
+
+
+  if(type == "gt") {
+
+    # Save the drought information as a gt table & export it
+    drought_tbl <-
+      settings_drought %>%
+      # using !! and := make R evalute this properly
+      dplyr::rename(!!mod_runs[1] := Scenario1) %>%
+      dplyr::rename(!!mod_runs[2] := Scenario2) %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = gt::md("Drought Reliability"),
+        #subtitle = md(paste0(scenario_name[1], " vs ", scenario_name[2]))
+      )
+
+    return(drought_tbl)
+
+  }
+
+  if(type == "tgrob") {
+    # table settings
+    tt <-
+      gridExtra::ttheme_default(
+        core    = list(
+          fg_params = list(cex = core_size)
+        ),
+        colhead = list(fg_params=list(cex = col_size)),
+        rowhead = list(fg_params=list(cex = row_size))
+      )
+
+    # Save the drought information as a gt table & export it
+    settings_drought2 <-
+      settings_drought %>%
+      # using !! and := make R evalute this properly
+      dplyr::rename(!!mod_runs[1] := Scenario1) %>%
+      dplyr::rename(!!mod_runs[2] := Scenario2)
+
+    # Table 2
+    drought_tbl <- gridExtra::tableGrob(
+      settings_drought2,
+      theme = tt,
+      rows  = NULL
+    )
+    return(drought_tbl)
+
+  }
+}
+
 make_psi_plot <- function(
     df,
     plot_name,
+    ymax = NA,
     ylab_title,
     title_size,
     xaxis_size
@@ -1066,7 +1617,7 @@ make_psi_plot <- function(
     ggplot2::geom_line() +
     ggplot2::geom_hline(yintercept = 0.40, linetype="solid", color="red") +
     ggplot2::geom_hline(yintercept = 0.55, linetype="solid", color="darkorange") +
-    ggplot2::geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
+    # ggplot2::geom_hline(yintercept = 0.70, linetype="solid", color="darkgreen") +
     ggplot2::geom_hline(yintercept = 0.85, linetype="solid", color="blue") +
     ggplot2::theme_bw() +
     ggplot2::labs(
@@ -1076,6 +1627,7 @@ make_psi_plot <- function(
       color    = "Model run",
       linetype = "Model run"
     ) +
+    ggplot2::ylim(0, ymax) +
     ggplot2::theme(
       plot.title = element_text(size = title_size),
       axis.title = element_text(size = xaxis_size)
@@ -1089,6 +1641,7 @@ make_psi_plot <- function(
 make_res_content_plot <- function(
     df,
     plot_name,
+    ymax = NA,
     ylab_title,
     storage_max_hline,
     title_size,
@@ -1109,6 +1662,7 @@ make_res_content_plot <- function(
       color    = "Model run",
       linetype = "Model run"
     ) +
+    ggplot2::ylim(0, ymax) +
     ggplot2::theme(
       plot.title = element_text(size = title_size),
       axis.title = element_text(size = xaxis_size)
